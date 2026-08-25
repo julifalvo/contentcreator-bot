@@ -18,8 +18,9 @@ NARRATIVE_TEMPLATES = [
     ["portada", "mockup:0", "slide:1", "slide:3", "demo", "cta"],
     # Pregunta directa: problema -> demo -> solución -> resultado, se salta el costo.
     ["portada", "slide:0", "demo", "slide:2", "slide:3", "mockup:0", "cta"],
-    # Con una foto de respiro después de plantear el problema. Sin mockups.
-    ["portada", "slide:0", "slide:1", "foto", "slide:2", "slide:3", "demo", "cta"],
+    # Foto de cierre antes del CTA, sin mockups. La foto va SIEMPRE pegada a la
+    # portada o al final: en el medio corta el hilo de la historia.
+    ["portada", "slide:0", "slide:1", "slide:2", "slide:3", "demo", "foto", "cta"],
     # Foto de apertura como ambientación, antes de arrancar con el problema.
     ["portada", "foto", "slide:0", "slide:1", "demo", "slide:3", "mockup:0", "cta"],
     # Solo texto + demo: pieza corta y directa, sin ninguna solución visual.

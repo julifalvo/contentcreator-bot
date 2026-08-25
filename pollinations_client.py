@@ -36,13 +36,15 @@ _PROMPTS = {
     ],
     # Para slides 100% foto, sin texto ni pantalla encima: ambiente de negocio,
     # nada de dispositivos con pantalla (así no hay riesgo de texto ilegible).
+    # Siempre con una persona trabajando o un gesto de trabajo: una foto de un
+    # objeto suelto (una puerta, una pared) no aporta nada al carrusel.
     "ambiente": [
-        "small modern business storefront exterior, warm afternoon light, photography, bokeh",
-        "cozy small business interior with plants, warm natural light, photography",
-        "entrepreneur working at a wooden desk, notebook and coffee, warm light, photography, bokeh",
+        "small business owner working at the counter of their shop, warm afternoon light, photography, bokeh",
+        "entrepreneur checking their phone while working, cozy shop interior, warm light, photography, bokeh",
+        "person writing orders in a notebook at a busy small business, warm light, photography, bokeh",
         "small team having a friendly meeting in a modern office, natural light, photography",
         "hands packing a small business order into a box, warm light, photography, bokeh",
-        "modern minimalist workspace with plants and natural light, photography",
+        "shop owner smiling while handing a package to a customer, warm light, photography, bokeh",
     ],
 }
 

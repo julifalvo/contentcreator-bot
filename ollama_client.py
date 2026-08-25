@@ -12,6 +12,7 @@ par de veces si falta algún campo.
 
 import json
 import os
+import re
 
 import requests
 from dotenv import load_dotenv
@@ -20,7 +21,7 @@ load_dotenv()
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
-MAX_RETRIES = 3
+MAX_RETRIES = 5
 
 SYSTEM_PROMPT = (
     "Sos alguien que arma agentes de IA y automatizaciones para negocios chicos y medianos, "
@@ -47,6 +48,27 @@ SYSTEM_PROMPT = (
     "relacionarse puntualmente con el caso que acabás de contar.\n"
     "- 'caption' es SOLO el texto del posteo, sin hashtags adentro (los hashtags van aparte, en "
     "el campo 'hashtags').\n\n"
+    "COHERENCIA (si esto falla, el video no sirve):\n"
+    "- La MISMA unidad de medida en toda la pieza. Si la portada dice 'por semana', los slides "
+    "y el resultado hablan por semana. Nunca mezcles 'por semana' con 'por mes'.\n"
+    "- Los números tienen que cerrar entre sí y con la aritmética. Si son 3 por semana, al año "
+    "son ~156, no 270. Si no estás seguro de una cuenta, no la pongas.\n"
+    "- Las 4 slides son una sola historia encadenada: (1) la escena del problema, (2) lo que "
+    "eso le cuesta, (3) qué cambia con el agente, (4) el resultado con el mismo número del "
+    "principio. Cada slide tiene que continuar la anterior, no ser una frase suelta.\n"
+    "- El demo tiene que ser el MISMO caso del que venís hablando: si el problema es que "
+    "responde tarde, el demo muestra al agente respondiendo al instante ese tipo de consulta. "
+    "La respuesta del agente resuelve algo concreto, no inventa excusas ni cambia de tema.\n"
+    "- 'tiempo_respuesta' tiene que ser inmediato y creíble: segundos, 'al instante', 'en el "
+    "momento'. Nunca minutos ni horas — el punto del agente es justamente que no hace esperar.\n"
+    "- Cada frase tiene que agregar información. Nada de muletillas vacías pegadas al final "
+    "('sin borrar nada', 'y listo', 'sin problemas') que no significan nada concreto.\n\n"
+    "IDIOMA — español rioplatense (Argentina):\n"
+    "- Voseo siempre: 'perdés', 'tenés', 'escribime', 'contame'. Nunca 'pierdes', 'tienes', "
+    "'escríbeme', 'conéctame', 'te quedas'.\n"
+    "- Nada de español de España ni neutro: no uses 'coger', 'ordenador', 'móvil', 'vale'.\n"
+    "- Revisá concordancia de género y número antes de responder ('las macetas', no 'los "
+    "macetas'). Cada frase tiene que poder leerse en voz alta sin trabarse.\n\n"
     "GANCHO (esto es lo más importante del video):\n"
     "- 'portada_text' tiene que golpear con lo que el negocio ESTÁ PERDIENDO HOY, no con lo que "
     "podría ganar. Comparar el costo de seguir igual contra lo que cuesta resolverlo. Ejemplos "
@@ -84,7 +106,7 @@ SYSTEM_PROMPT = (
     '  "swipe_hint": "string en MAYÚSCULAS, máx 5 palabras, invita a seguir mirando el carrusel (ej: \'MIRÁ LO QUE PASÓ\'). Sin flechas ni emojis",\n'
     '  "demo_caption": "string en MAYÚSCULAS, máx 7 palabras, el remate que va debajo del chat del demo (ej: \'CONTESTÓ ANTES QUE VOS\')",\n'
     '  "caption": "string, 2-4 líneas, termina con una pregunta concreta",\n'
-    '  "hashtags": ["8 a 10 strings sin el símbolo #"]\n'
+    '  "hashtags": ["8 a 10 strings sin el símbolo #, sin espacios, palabras completas y bien escritas (nunca cortadas tipo tiemposdigi)"]\n'
     "}\n\n"
     "Ejemplo del NIVEL de detalle y tono que se espera (no copies el rubro, "
     "inventá uno distinto, pero imitá exactamente este estilo de oraciones "
@@ -115,6 +137,24 @@ _REQUIRED_TOP = {"negocio_ejemplo", "demo", "portada_text", "slides", "cta_slide
 _REQUIRED_DEMO = {"canal", "mensaje_cliente", "respuesta_bot", "tiempo_respuesta"}
 _REQUIRED_SLIDE = {"title", "text"}
 
+# Formas verbales de español neutro/España que delatan que el modelo se salió
+# del voseo rioplatense. Se chequean como palabra entera.
+_NO_VOSEO = {
+    "pierdes", "tienes", "puedes", "quieres", "haces", "necesitas", "estás perdiendo tú",
+    "escríbeme", "cuéntame", "conéctame", "contáctame", "dime", "mírame",
+    "tu puedes", "te quedas", "coger", "ordenador", "móvil", "vale",
+}
+_UNIDADES = ("por semana", "a la semana", "semanal", "por mes", "al mes", "mensual", "por día", "al día", "diario")
+
+
+def _texto_completo(data: dict) -> str:
+    partes = [data.get("portada_text", ""), data.get("caption", ""), data.get("cta_slide_text", ""),
+              data.get("cta_final", "")]
+    partes += [f'{s.get("title", "")} {s.get("text", "")}' for s in data.get("slides", [])]
+    d = data.get("demo", {})
+    partes += [d.get("mensaje_cliente", ""), d.get("respuesta_bot", "")]
+    return " ".join(partes).lower()
+
 
 def _validate(data: dict) -> None:
     missing = _REQUIRED_TOP - data.keys()
@@ -127,8 +167,40 @@ def _validate(data: dict) -> None:
     for s in data["slides"]:
         if _REQUIRED_SLIDE - s.keys():
             raise ValueError("Alguna slide no tiene 'title'/'text'")
+        if len(s["text"].split()) < 4:
+            raise ValueError(f"Slide demasiado corta para entenderse sola: {s['text']!r}")
     if not isinstance(data["hashtags"], list) or not data["hashtags"]:
         raise ValueError("'hashtags' tiene que ser una lista no vacía")
+
+    texto = _texto_completo(data)
+
+    encontradas = [p for p in _NO_VOSEO if re.search(rf"\b{re.escape(p)}\b", texto)]
+    if encontradas:
+        raise ValueError(f"No está en voseo rioplatense: {encontradas}")
+
+    # Mezclar unidades de tiempo es el error más común y rompe la coherencia
+    # del carrusel (portada 'por semana' vs resultado 'al mes').
+    usadas = {u for u in _UNIDADES if u in texto}
+    familias = {
+        "semana" if "seman" in u else "mes" if ("mes" in u or "mensual" in u) else "dia"
+        for u in usadas
+    }
+    if len(familias) > 1:
+        raise ValueError(f"Mezcla unidades de tiempo distintas: {sorted(usadas)}")
+
+    if len(data["caption"].split()) < 12:
+        raise ValueError("El caption quedó demasiado corto/cortado")
+
+    tiempo = data["demo"].get("tiempo_respuesta", "").lower()
+    if re.search(r"\b(minutos?|horas?|días?)\b", tiempo):
+        raise ValueError(f"tiempo_respuesta no es inmediato: {tiempo!r}")
+
+    # Los hashtags salen mal escritos o cortados seguido ('tiemposdigi'), y en
+    # el posteo se notan mucho. Mejor descartar y reintentar.
+    for h in data["hashtags"]:
+        limpio = h.lstrip("#").strip()
+        if len(limpio) < 5 or " " in limpio:
+            raise ValueError(f"Hashtag inválido o cortado: {h!r}")
 
 
 def _ping_ollama() -> None:
