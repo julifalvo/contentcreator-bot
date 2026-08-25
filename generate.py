@@ -74,15 +74,21 @@ def build_piece(pillar_key: str, modo: str) -> Path:
     cta = random.choice(CTAS)
 
     demo = content["demo"]
-    if modo == "ollama":
-        print("  Generando mockups con el modelo local...")
-        mockups = pick_mockups_ai(content["negocio_ejemplo"], count=2)
-    else:
-        mockups = pick_mockups(content["negocio_ejemplo"], count=2)
     mockup_labels = {"web": "mockup de sitio web", "bot": "mockup de flujo automatizado", "agente": "mockup de agente de recomendaciones"}
     slides = content["slides"]
     template = random.choice(NARRATIVE_TEMPLATES)
     total_slides_in_template = sum(1 for t in template if t.startswith("slide:"))
+
+    # Solo generamos los mockups que esta plantilla realmente usa: hay
+    # plantillas con dos, con uno, y algunas sin ninguno.
+    mockups_needed = len({t for t in template if t.startswith("mockup:")})
+    if mockups_needed == 0:
+        mockups = []
+    elif modo == "ollama":
+        print(f"  Generando {mockups_needed} mockup(s) con el modelo local...")
+        mockups = pick_mockups_ai(content["negocio_ejemplo"], count=mockups_needed)
+    else:
+        mockups = pick_mockups(content["negocio_ejemplo"], count=mockups_needed)
 
     # --- Gráficos + guion, recorriendo la plantilla narrativa elegida ---
     img_index = 0

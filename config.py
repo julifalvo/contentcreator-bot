@@ -8,20 +8,24 @@
 # Tokens válidos: "portada", "slide:0".."slide:3", "demo", "mockup:0"/"mockup:1",
 # "foto" (slide 100% foto, sin texto ni título — solo respiro visual), "cta".
 NARRATIVE_TEMPLATES = [
-    # Clásico: como era antes, todo en orden.
+    # Clásico: todo en orden, con las dos soluciones visuales al final.
     ["portada", "slide:0", "slide:1", "slide:2", "slide:3", "demo", "mockup:0", "mockup:1", "cta"],
     # Gancho de resultado: muestra el resultado primero, después explica cómo se llegó.
     ["portada", "slide:3", "demo", "slide:0", "slide:1", "slide:2", "mockup:0", "cta"],
-    # El demo primero, antes de dar contexto.
-    ["portada", "demo", "slide:0", "slide:1", "slide:2", "slide:3", "mockup:0", "mockup:1", "cta"],
+    # El demo primero, antes de dar contexto. Un solo mockup, separado del final.
+    ["portada", "demo", "slide:0", "slide:1", "mockup:0", "slide:2", "slide:3", "cta"],
     # Arranca mostrando la solución visual, versión más corta y directa.
-    ["portada", "mockup:0", "slide:1", "slide:3", "demo", "mockup:1", "cta"],
+    ["portada", "mockup:0", "slide:1", "slide:3", "demo", "cta"],
     # Pregunta directa: problema -> demo -> solución -> resultado, se salta el costo.
-    ["portada", "slide:0", "demo", "slide:2", "slide:3", "mockup:1", "cta"],
-    # Con una foto de respiro después de plantear el problema.
-    ["portada", "slide:0", "slide:1", "foto", "slide:2", "slide:3", "demo", "mockup:0", "cta"],
+    ["portada", "slide:0", "demo", "slide:2", "slide:3", "mockup:0", "cta"],
+    # Con una foto de respiro después de plantear el problema. Sin mockups.
+    ["portada", "slide:0", "slide:1", "foto", "slide:2", "slide:3", "demo", "cta"],
     # Foto de apertura como ambientación, antes de arrancar con el problema.
-    ["portada", "foto", "slide:0", "slide:1", "demo", "slide:3", "mockup:1", "cta"],
+    ["portada", "foto", "slide:0", "slide:1", "demo", "slide:3", "mockup:0", "cta"],
+    # Solo texto + demo: pieza corta y directa, sin ninguna solución visual.
+    ["portada", "slide:0", "slide:1", "demo", "slide:3", "cta"],
+    # Mockup intercalado entre el problema y el resultado, con foto de cierre.
+    ["portada", "slide:0", "mockup:0", "demo", "slide:3", "foto", "cta"],
 ]
 
 # Pilares temáticos del perfil (negocios en automático / agentes AI / chatbots)
@@ -60,54 +64,64 @@ PILLARS = {
     },
 }
 
-# Paletas de marca — todas estilo tech/oscuro, alto contraste, aptas para TikTok.
-# Cada pieza generada sortea una al azar (ver generate.py) para que el look
-# visual también varíe, no solo el texto. La primera es la paleta original.
+# Paletas de marca. Cada pieza sortea una al azar (ver generate.py) para que el
+# look visual varíe, no solo el texto. El criterio es "smooth": degradés de poco
+# recorrido (los dos tonos cercanos entre sí, sin saltos bruscos), acentos
+# desaturados en vez de neón puro, y fondos claros mezclados con los oscuros.
 PALETTES = [
-    {  # Cian / Violeta
-        "bg_top": (10, 14, 26),
-        "bg_bottom": (24, 20, 60),
-        "accent": (0, 224, 255),
-        "accent_2": (255, 184, 0),
-        "text": (245, 246, 250),
-        "text_dim": (170, 176, 195),
+    {  # Medianoche / Cian suave
+        "bg_top": (16, 22, 38),
+        "bg_bottom": (28, 36, 62),
+        "accent": (96, 208, 224),
+        "accent_2": (240, 196, 132),
+        "text": (240, 244, 250),
+        "text_dim": (168, 180, 200),
         "badge_bg": (255, 255, 255),
     },
-    {  # Verde Neón
-        "bg_top": (8, 20, 18),
-        "bg_bottom": (14, 42, 36),
-        "accent": (60, 240, 150),
-        "accent_2": (255, 214, 64),
-        "text": (240, 250, 246),
-        "text_dim": (170, 196, 188),
+    {  # Salvia / Verde apagado
+        "bg_top": (20, 32, 30),
+        "bg_bottom": (34, 52, 46),
+        "accent": (134, 214, 174),
+        "accent_2": (238, 206, 138),
+        "text": (238, 246, 242),
+        "text_dim": (168, 192, 182),
         "badge_bg": (255, 255, 255),
     },
-    {  # Rosa Neón
-        "bg_top": (20, 10, 24),
-        "bg_bottom": (48, 16, 56),
-        "accent": (255, 90, 190),
-        "accent_2": (255, 196, 60),
-        "text": (250, 245, 250),
-        "text_dim": (200, 176, 202),
+    {  # Lavanda / Ciruela
+        "bg_top": (30, 24, 42),
+        "bg_bottom": (48, 38, 66),
+        "accent": (188, 164, 236),
+        "accent_2": (240, 186, 168),
+        "text": (244, 240, 250),
+        "text_dim": (190, 180, 208),
         "badge_bg": (255, 255, 255),
     },
-    {  # Azul Eléctrico
-        "bg_top": (8, 14, 28),
-        "bg_bottom": (18, 30, 62),
-        "accent": (70, 150, 255),
-        "accent_2": (255, 200, 90),
-        "text": (244, 248, 255),
-        "text_dim": (170, 186, 214),
+    {  # Azul pizarra / Durazno
+        "bg_top": (22, 30, 44),
+        "bg_bottom": (36, 48, 68),
+        "accent": (128, 176, 232),
+        "accent_2": (242, 176, 148),
+        "text": (240, 245, 252),
+        "text_dim": (172, 188, 210),
         "badge_bg": (255, 255, 255),
     },
-    {  # Coral / Carbón
-        "bg_top": (22, 10, 12),
-        "bg_bottom": (48, 18, 20),
-        "accent": (255, 99, 90),
-        "accent_2": (255, 204, 70),
-        "text": (250, 244, 244),
-        "text_dim": (208, 178, 176),
-        "badge_bg": (255, 255, 255),
+    {  # Arena clara (fondo claro, texto oscuro)
+        "bg_top": (246, 242, 236),
+        "bg_bottom": (232, 226, 218),
+        "accent": (198, 122, 90),
+        "accent_2": (122, 142, 128),
+        "text": (42, 38, 34),
+        "text_dim": (110, 102, 94),
+        "badge_bg": (42, 38, 34),
+    },
+    {  # Niebla fría (fondo claro, texto oscuro)
+        "bg_top": (240, 244, 248),
+        "bg_bottom": (222, 230, 238),
+        "accent": (68, 122, 156),
+        "accent_2": (196, 138, 106),
+        "text": (30, 40, 50),
+        "text_dim": (100, 116, 132),
+        "badge_bg": (30, 40, 50),
     },
 ]
 
@@ -209,9 +223,11 @@ HASHTAGS_BASE = [
 ]
 
 CTAS = [
-    "Seguime para más tips de automatización 🤖",
-    "Comentá 'AUTO' y te cuento cómo empezar",
-    "Guardá este video para no perdértelo",
-    "¿Querés esto en tu negocio? Escribime",
-    "Seguime si querés vender mientras dormís",
+    "Escribime y te digo cuánto estás perdiendo",
+    "Comentá 'AUTO' y te armo el primer flujo",
+    "Guardalo antes de perder otro cliente",
+    "¿Cuánto más vas a seguir haciéndolo a mano?",
+    "Seguime si no querés seguir perdiendo mensajes",
+    "Contame tu caso y te digo por dónde empezar",
+    "Esto ya lo tiene tu competencia. ¿Y vos?",
 ]

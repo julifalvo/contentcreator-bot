@@ -19,7 +19,7 @@ CASES = [
             "respuesta_bot": "Anotado: 3 potus grandes y 2 bolsas de tierra para mañana. ¿A qué dirección las llevamos?",
             "tiempo_respuesta": "cargado en la planilla al instante",
         },
-        "portada_text": "Dejá de anotar pedidos a mano",
+        "portada_text": "Ese cuaderno te está costando pedidos",
         "slides": [
             {"title": "El problema", "text": "20 pedidos por WhatsApp, todos anotados en un cuaderno"},
             {"title": "Lo que pasaba", "text": "Se mezclaban direcciones y perdía pedidos"},
@@ -42,7 +42,7 @@ CASES = [
             "respuesta_bot": "Anotado: gaseosas 1L y aceite de girasol. ¿Algo más para el pedido del lunes?",
             "tiempo_respuesta": "agregado a la lista en el momento",
         },
-        "portada_text": "Dejá de armar el pedido a mano cada lunes",
+        "portada_text": "Cada lunes regalás una hora de tu vida",
         "slides": [
             {"title": "El problema", "text": "Anotaba el pedido a mano cada lunes a la noche"},
             {"title": "Se le pasaban cosas", "text": "A veces se quedaba sin stock a mitad de semana"},
@@ -65,7 +65,7 @@ CASES = [
             "respuesta_bot": "Sin problema. Tengo lugar mañana 16hs o el jueves 11hs. ¿Cuál te queda mejor?",
             "tiempo_respuesta": "reprogramado en el momento, sin mirar la agenda",
         },
-        "portada_text": "Dejá de mandar los recordatorios uno por uno",
+        "portada_text": "Cada noche regalás 40 minutos gratis",
         "slides": [
             {"title": "El problema", "text": "12 a 15 mensajes de recordatorio, todas las noches"},
             {"title": "El costo", "text": "40 minutos por noche solo copiando y pegando"},
@@ -89,7 +89,7 @@ CASES = [
             "respuesta_bot": "Anotado: 2kg de asado y 12 chorizos para el domingo. ¿Retirás en el local o llevamos a domicilio?",
             "tiempo_respuesta": "cargado en el pedido del día al instante",
         },
-        "portada_text": "Dejá de anotar los pedidos del finde a mano",
+        "portada_text": "El sábado alguien se queda sin su pedido",
         "slides": [
             {"title": "El problema", "text": "Los sábados se amontonaban 15 pedidos por WhatsApp"},
             {"title": "Lo que pasaba", "text": "Se mezclaban cantidades y faltaba mercadería"},
@@ -112,7 +112,7 @@ CASES = [
             "respuesta_bot": "Sí, tu pedido #482 está listo desde ayer a las 18hs. Podés retirarlo hasta las 20hs.",
             "tiempo_respuesta": "respondido sin revisar el cuaderno de pedidos",
         },
-        "portada_text": "Cero llamados preguntando si está lista la ropa",
+        "portada_text": "20 veces por día te cortan el trabajo",
         "slides": [
             {"title": "El problema", "text": "20 llamados por día preguntando por el estado del pedido"},
             {"title": "Lo que pasaba", "text": "Interrumpía el trabajo en el mostrador todo el día"},
@@ -135,7 +135,7 @@ CASES = [
             "respuesta_bot": "Anotado: 2 hamburguesas completas + papas grandes. Listo en 15 minutos, para retirar.",
             "tiempo_respuesta": "pedido cargado en cocina al instante",
         },
-        "portada_text": "El pedido llega a cocina sin escribirlo dos veces",
+        "portada_text": "En la hora pico se te pierden pedidos",
         "slides": [
             {"title": "El problema", "text": "El mostrador anotaba el pedido y lo volvía a escribir para cocina"},
             {"title": "Lo que pasaba", "text": "Se perdían pedidos en la hora pico"},
@@ -160,7 +160,7 @@ CASES = [
             "respuesta_bot": "Sí, tiene cochera. Alquiler $450.000 + expensas. Puedo mostrártelo hoy 17hs o mañana 10hs, ¿cuál te sirve?",
             "tiempo_respuesta": "en 8 segundos, sin que nadie mirara el celular",
         },
-        "portada_text": "De 6 horas de espera a 8 segundos",
+        "portada_text": "Tardaste 6 horas. Ya reservaron en otro lado",
         "slides": [
             {"title": "El problema", "text": "Contestaban los mensajes recién a la tarde"},
             {"title": "Lo que perdían", "text": "La mitad ya había agendado visita en otro lado"},
@@ -183,7 +183,7 @@ CASES = [
             "respuesta_bot": "Para ese tamaño arranca en $25.000. Tengo lugar el jueves 15hs o el sábado 12hs. ¿Te reservo alguno?",
             "tiempo_respuesta": "al instante, aunque el tatuador esté trabajando",
         },
-        "portada_text": "0 turnos perdidos por responder tarde",
+        "portada_text": "3 turnos por semana se van a otro estudio",
         "slides": [
             {"title": "El problema", "text": "Contestaba recién cuando terminaba de tatuar"},
             {"title": "Lo que perdía", "text": "3 turnos por semana reservados en otro estudio"},
@@ -206,7 +206,7 @@ CASES = [
             "respuesta_bot": "Entendido. ¿Tomó agua hoy? Con esos síntomas conviene traerlo ya, tengo lugar en 20 minutos.",
             "tiempo_respuesta": "en menos de 1 minuto, aunque la veterinaria esté en consultorio",
         },
-        "portada_text": "Ningún mensaje sin responder más de 1 minuto",
+        "portada_text": "Te escriben angustiados y contestás 2 horas después",
         "slides": [
             {"title": "El problema", "text": "Urgencias contestadas 2 horas después"},
             {"title": "Lo que pasaba", "text": "La gente se iba a otra clínica más rápida"},
@@ -230,7 +230,7 @@ CASES = [
             "respuesta_bot": "Para 2 personas en enero, desde $850.000 con hotel y traslados. ¿Querés que te arme la cotización completa?",
             "tiempo_respuesta": "en 12 segundos, sin que nadie mire el celular",
         },
-        "portada_text": "De 1 día de espera a 12 segundos por una cotización",
+        "portada_text": "Mientras cotizás, ya compraron en otra agencia",
         "slides": [
             {"title": "El problema", "text": "Las cotizaciones tardaban hasta un día en responderse"},
             {"title": "Lo que perdían", "text": "La mitad ya había cotizado en otra agencia"},
@@ -253,7 +253,7 @@ CASES = [
             "respuesta_bot": "Sí, queda 1 en talle 42. Te lo reservo 24hs, ¿pasás a buscarlo o lo enviamos?",
             "tiempo_respuesta": "en 6 segundos, aunque el local esté cerrado",
         },
-        "portada_text": "El talle se reserva antes de que se lo lleve otro",
+        "portada_text": "Ese talle único ya se vendió mientras dormías",
         "slides": [
             {"title": "El problema", "text": "Contestaban los DMs recién al otro día"},
             {"title": "Lo que perdían", "text": "El talle único ya se había vendido en el local"},
@@ -276,7 +276,7 @@ CASES = [
             "respuesta_bot": "Tengo lugar hoy a las 16hs para diagnóstico. Dura 30 minutos, ¿te sirve ese horario?",
             "tiempo_respuesta": "en 40 segundos, aunque estén con las manos en un motor",
         },
-        "portada_text": "El turno se agenda aunque tengas las manos ocupadas",
+        "portada_text": "3 autos por semana se van a otro taller",
         "slides": [
             {"title": "El problema", "text": "Los mensajes se contestaban recién al cerrar el taller"},
             {"title": "Lo que perdían", "text": "3 autos por semana se iban a otro taller"},
@@ -301,7 +301,7 @@ CASES = [
             "respuesta_bot": "Tranquilo, son $18.000. Te paso el link de pago: pago.tugimnasio.com",
             "tiempo_respuesta": "recordatorio automático enviado el día 1 de cada mes",
         },
-        "portada_text": "Dejá de perseguir a los socios para cobrar",
+        "portada_text": "Pasás 2 días al mes persiguiendo plata tuya",
         "slides": [
             {"title": "El problema", "text": "2 días juntando pagos, mensaje por mensaje"},
             {"title": "Lo que se perdía", "text": "5 o 6 socios se olvidaban directamente"},
@@ -324,7 +324,7 @@ CASES = [
             "respuesta_bot": "No hay problema, gracias por avisar. Le ofrezco el lugar a alguien de la lista de espera. ¿Querés reprogramar?",
             "tiempo_respuesta": "el hueco se cubre en minutos, no en días",
         },
-        "portada_text": "3 turnos vacíos por semana, resueltos",
+        "portada_text": "Cada sillón vacío es plata que no vuelve",
         "slides": [
             {"title": "El problema", "text": "Una hora de sillón vacía por cada faltazo"},
             {"title": "Lo que pasaba", "text": "Las cancelaciones llegaban tarde para reaccionar"},
@@ -347,7 +347,7 @@ CASES = [
             "respuesta_bot": "Quedan 4 kilos, por debajo del mínimo de 10. Ya avisé al proveedor para reponer mañana a la mañana.",
             "tiempo_respuesta": "control automático, sin revisar la heladera",
         },
-        "portada_text": "Nunca más sin stock un viernes a la noche",
+        "portada_text": "Viernes 9 de la noche y te falta un ingrediente",
         "slides": [
             {"title": "El problema", "text": "Controlaban el stock a ojo, revisando la heladera"},
             {"title": "Lo que pasaba", "text": "Sacaban platos del menú a mitad de servicio"},
@@ -371,7 +371,7 @@ CASES = [
             "respuesta_bot": "Sí, quedan 8 unidades. ¿Te lo reservo para retirar hoy?",
             "tiempo_respuesta": "consulta de stock respondida sin ir hasta la góndola",
         },
-        "portada_text": "El stock se contesta sin pisar la góndola",
+        "portada_text": "Perdés horas caminando para decir 'sí, tenemos'",
         "slides": [
             {"title": "El problema", "text": "Cada consulta de stock implicaba ir a revisar físicamente"},
             {"title": "Lo que pasaba", "text": "10 minutos perdidos por consulta, todo el día"},
@@ -394,7 +394,7 @@ CASES = [
             "respuesta_bot": "Sí, tu pedido está listo desde el martes. Podés retirarlo hasta las 19hs cualquier día.",
             "tiempo_respuesta": "estado del pedido respondido sin revisar la planilla",
         },
-        "portada_text": "Nadie tiene que revisar la planilla para saber si está listo",
+        "portada_text": "Una hora por día buscando en la planilla",
         "slides": [
             {"title": "El problema", "text": "Cada consulta de estado implicaba buscar en la planilla de pedidos"},
             {"title": "Lo que pasaba", "text": "5 minutos por consulta, con 15 consultas por día"},
@@ -417,7 +417,7 @@ CASES = [
             "respuesta_bot": "Sí, tengo 15hs y 17hs libres para lavado completo. ¿Cuál preferís?",
             "tiempo_respuesta": "turno confirmado sin interrumpir el lavado en curso",
         },
-        "portada_text": "El turno se agenda sin frenar el lavado en curso",
+        "portada_text": "Entre auto y auto se te escapan 4 turnos",
         "slides": [
             {"title": "El problema", "text": "Contestaban los mensajes recién entre auto y auto"},
             {"title": "Lo que pasaba", "text": "Perdían turnos por la demora en responder"},
@@ -442,7 +442,7 @@ CASES = [
             "respuesta_bot": "Sí, tenemos. La caja de 100 sale $6.500. ¿Te la reservo para retirar hoy?",
             "tiempo_respuesta": "respondido sin que nadie deje el mostrador",
         },
-        "portada_text": "30 años de mostrador, primer mes vendiendo por WhatsApp",
+        "portada_text": "Tu competencia abrió a 3 cuadras con catálogo online",
         "slides": [
             {"title": "30 años igual", "text": "El negocio funcionó siempre solo con el mostrador"},
             {"title": "Lo que cambió", "text": "Abrió competencia grande a 3 cuadras, con catálogo online"},
@@ -465,7 +465,7 @@ CASES = [
             "respuesta_bot": "Bienvenido. Pasame tu CUIT y el rubro de tu actividad para arrancar el legajo.",
             "tiempo_respuesta": "carga automática, sin que el contador escriba nada",
         },
-        "portada_text": "De 25 minutos por legajo a carga automática",
+        "portada_text": "25 minutos por cliente que no cobrás",
         "slides": [
             {"title": "El problema", "text": "Cada legajo se armaba a mano, dato por dato"},
             {"title": "El riesgo", "text": "Con 40 clientes activos, algo siempre se pasaba"},
@@ -488,7 +488,7 @@ CASES = [
             "respuesta_bot": "Sí, tengo 15hs o 17:30hs libres para corte y color. ¿Cuál preferís?",
             "tiempo_respuesta": "agendado al instante, sin interrumpir a nadie",
         },
-        "portada_text": "Del cuaderno de turnos al agente que agenda solo",
+        "portada_text": "Cada llamada que no atendés es un turno perdido",
         "slides": [
             {"title": "El problema", "text": "La agenda vivía en un cuaderno de tapa dura"},
             {"title": "Lo que se perdía", "text": "Turnos perdidos por no atender el teléfono"},
@@ -511,7 +511,7 @@ CASES = [
             "respuesta_bot": "Sí, tenemos 3 unidades. ¿Te lo reservo para retirar o lo enviamos?",
             "tiempo_respuesta": "respondido sin que nadie deje la caja",
         },
-        "portada_text": "40 años de mostrador, primera venta por WhatsApp",
+        "portada_text": "Solo vendés si alguien entra caminando",
         "slides": [
             {"title": "40 años igual", "text": "El local siempre vendió solo a quien entraba caminando"},
             {"title": "Lo que cambió", "text": "Empezaron a preguntar por WhatsApp si había tal libro"},
@@ -534,7 +534,7 @@ CASES = [
             "respuesta_bot": "Sí, hacemos envío hoy hasta las 19hs. ¿Para qué ocasión es, para armarte una propuesta?",
             "tiempo_respuesta": "cotizado y coordinado en el momento",
         },
-        "portada_text": "Del cuaderno de pedidos al agente que cotiza solo",
+        "portada_text": "Un pedido urgente mal anotado y perdés al cliente",
         "slides": [
             {"title": "El problema", "text": "Los pedidos de último momento se anotaban en un cuaderno"},
             {"title": "Lo que pasaba", "text": "Se mezclaban horarios de entrega y direcciones"},
@@ -557,7 +557,7 @@ CASES = [
             "respuesta_bot": "Perfecto. Contame la superficie aproximada y la zona, así te paso un rango de presupuesto inicial.",
             "tiempo_respuesta": "primer contacto respondido sin agendar una llamada",
         },
-        "portada_text": "La primera consulta ya no espera una llamada agendada",
+        "portada_text": "El interesado se enfría mientras coordinás la llamada",
         "slides": [
             {"title": "El problema", "text": "Cada consulta nueva esperaba a coordinar una llamada"},
             {"title": "Lo que pasaba", "text": "Muchos interesados se enfriaban en la espera"},

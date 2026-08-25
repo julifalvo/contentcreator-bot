@@ -4,7 +4,7 @@ import random
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 import pollinations_client
 from config import BRAND, CANVAS_SIZE, FONTS, HANDLE, STYLE
@@ -43,6 +43,26 @@ def set_style(style: dict) -> None:
 
 def _lighten(color: tuple, amount: int) -> tuple:
     return tuple(min(255, c + amount) for c in color)
+
+
+def _soft_shadow(img: Image.Image, box: list, radius: int, blur: int = 18, alpha: int = 70) -> Image.Image:
+    """Devuelve `img` con una sombra difusa debajo del rectángulo `box`.
+    Le da profundidad a las tarjetas sin bordes duros."""
+    w, h = img.size
+    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(shadow)
+    x0, y0, x1, y1 = box
+    sdraw.rounded_rectangle([x0, y0 + 10, x1, y1 + 14], radius=radius, fill=(0, 0, 0, alpha))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(blur))
+    return Image.alpha_composite(img.convert("RGBA"), shadow).convert("RGB")
+
+
+def _contrast_text(bg: tuple) -> tuple:
+    """Devuelve un color de texto (casi negro o casi blanco) que contraste con
+    `bg`. Necesario porque hay paletas de fondo claro y otras de fondo oscuro:
+    un color de texto fijo sería ilegible en la mitad de los casos."""
+    luminancia = 0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]
+    return (18, 18, 24) if luminancia > 150 else (245, 246, 250)
 
 # Las fuentes del sistema usadas acá no traen glifos de emoji a color, así que
 # cualquier emoji en el texto se dibujaría como un cuadro vacío ("tofu").
@@ -125,8 +145,12 @@ def render_photo_slide(out_path: Path) -> None:
         odraw.line([(0, h - strip_h + i), (w, h - strip_h + i)], fill=(0, 0, 0, alpha))
     img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
+    # El handle va en claro fijo: la franja de arriba siempre es oscura, sin
+    # importar si la paleta activa es clara u oscura.
     draw = ImageDraw.Draw(img)
-    _draw_footer(draw)
+    font = _font("regular", 30)
+    fbbox = draw.textbbox((0, 0), HANDLE, font=font)
+    draw.text(((w - (fbbox[2] - fbbox[0])) // 2, h - 90), HANDLE, font=font, fill=(230, 232, 238))
     img.save(out_path, "PNG")
 
 
@@ -141,25 +165,33 @@ def _apply_bg_pattern(img: Image.Image) -> Image.Image:
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     odraw = ImageDraw.Draw(overlay)
 
+    # Alphas bajos a propósito: la textura tiene que insinuarse, no competir
+    # con el texto ni ensuciar el degradé.
     if pattern == "dots":
-        dot_rgba = BRAND["accent"] + (26,)
-        for gy in range(50, h, 80):
-            for gx in range(50, w, 80):
+        dot_rgba = BRAND["accent"] + (16,)
+        for gy in range(50, h, 96):
+            for gx in range(50, w, 96):
                 odraw.ellipse([gx - 3, gy - 3, gx + 3, gy + 3], fill=dot_rgba)
     elif pattern == "grid":
-        line_rgba = BRAND["accent"] + (16,)
-        for gx in range(0, w, 100):
+        line_rgba = BRAND["accent"] + (10,)
+        for gx in range(0, w, 120):
             odraw.line([(gx, 0), (gx, h)], fill=line_rgba, width=2)
-        for gy in range(0, h, 100):
+        for gy in range(0, h, 120):
             odraw.line([(0, gy), (w, gy)], fill=line_rgba, width=2)
     elif pattern == "diagonal":
-        line_rgba = BRAND["accent"] + (18,)
-        for x in range(-h, w, 90):
+        line_rgba = BRAND["accent"] + (10,)
+        for x in range(-h, w, 110):
             odraw.line([(x, 0), (x + h, h)], fill=line_rgba, width=3)
     elif pattern == "blobs":
-        blob_rgba = BRAND["accent"] + (28,)
-        for cx, cy, r in [(w * 0.85, h * 0.1, 300), (w * 0.05, h * 0.92, 260)]:
-            odraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=blob_rgba)
+        # Manchas difuminadas: se dibujan en chico y se escalan, que sale más
+        # barato que aplicar un blur gaussiano sobre el lienzo entero.
+        small = Image.new("RGBA", (w // 8, h // 8), (0, 0, 0, 0))
+        sdraw = ImageDraw.Draw(small)
+        blob_rgba = BRAND["accent"] + (30,)
+        for cx, cy, r in [(w * 0.85, h * 0.12, 320), (w * 0.08, h * 0.9, 280)]:
+            cx, cy, r = cx / 8, cy / 8, r / 8
+            sdraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=blob_rgba)
+        overlay = small.resize((w, h), Image.BICUBIC)
 
     return Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
@@ -262,7 +294,7 @@ def _draw_badge(draw: ImageDraw.ImageDraw, text: str, x: int, y: int) -> None:
     h = (bbox[3] - bbox[1]) + pad_y * 2
     radius = h // 2 if STYLE["badge_style"] == "pill" else min(STYLE["corner_radius"], h // 2)
     draw.rounded_rectangle([x, y, x + w, y + h], radius=radius, fill=BRAND["badge_bg"])
-    draw.text((x + pad_x, y + pad_y - bbox[1]), text, font=font, fill=(15, 15, 25))
+    draw.text((x + pad_x, y + pad_y - bbox[1]), text, font=font, fill=_contrast_text(BRAND["badge_bg"]))
 
 
 def _draw_footer(draw: ImageDraw.ImageDraw) -> None:
@@ -376,7 +408,7 @@ def render_demo(canal: str, mensaje_cliente: str, respuesta_bot: str, tiempo_res
     draw.text((w - 60 - (tag_bbox[2] - tag_bbox[0]), bubble_bottom + 55), "AGENTE DE IA", font=tag_font, fill=(60, 65, 85))
     bot_bottom = _draw_bubble(
         draw, _clean(respuesta_bot), body_font, top_y=bubble_bottom + 95, align="right",
-        max_bubble_width=820, fill=BRAND["accent"], text_fill=(10, 15, 25),
+        max_bubble_width=820, fill=BRAND["accent"], text_fill=_contrast_text(BRAND["accent"]),
     )
 
     time_font = _font("regular", 32)
@@ -648,6 +680,8 @@ def render_web_mockup(
 
     browser_bottom = card_y0 + card_h + 70
 
+    img = _soft_shadow(img, [browser_left, browser_top, browser_right, browser_bottom], 28, blur=24, alpha=80)
+    draw = ImageDraw.Draw(img)
     draw.rounded_rectangle([browser_left, browser_top, browser_right, browser_bottom], radius=28, fill=(255, 255, 255))
     draw.rectangle([browser_left, browser_top + 28, browser_right, browser_top + chrome_h], fill=(28, 30, 42))
     draw.rounded_rectangle([browser_left, browser_top, browser_right, browser_top + chrome_h], radius=28, fill=(28, 30, 42))
@@ -675,7 +709,7 @@ def render_web_mockup(
     draw.rounded_rectangle([btn_x0, btn_y0, btn_x0 + btn_w, btn_y0 + btn_h], radius=btn_h // 2, fill=BRAND["accent"])
     draw.text(
         (btn_x0 + 50, btn_y0 + btn_h // 2 - (bbox[3] - bbox[1]) // 2 - bbox[1]),
-        btn_text, font=btn_font, fill=(10, 15, 25),
+        btn_text, font=btn_font, fill=_contrast_text(BRAND["accent"]),
     )
 
     for i, feat in enumerate(features[:3]):
@@ -728,8 +762,8 @@ def render_bot_mockup(steps: list[str], caption: str, out_path: Path) -> None:
     for i, step in enumerate(steps):
         y0 = start_y + i * (node_h + gap)
         is_first, is_last = i == 0, i == len(steps) - 1
-        color = BRAND["accent"] if is_first else ((60, 220, 130) if is_last else _lighten(canvas_bg, 30))
-        text_color = (10, 15, 25) if (is_first or is_last) else BRAND["text"]
+        color = BRAND["accent"] if is_first else (BRAND["accent_2"] if is_last else _lighten(canvas_bg, 30))
+        text_color = _contrast_text(color)
         draw.rounded_rectangle([node_x0, y0, node_x0 + node_w, y0 + node_h], radius=STYLE["corner_radius"], fill=color)
         draw.text((node_x0 + 40, y0 + 30), str(i + 1), font=num_font, fill=text_color)
         _draw_multiline_centered(
@@ -779,6 +813,13 @@ def render_agente_mockup(items: list[dict], caption: str, out_path: Path) -> Non
     card_h, gap, start_y = 270, 55, 260
     name_font = _font("bold", 46)
     meta_font = _font("regular", 32)
+
+    # Sombras primero (sobre el fondo), después las tarjetas encima
+    for i in range(len(items)):
+        y0 = start_y + i * (card_h + gap)
+        img = _soft_shadow(img, [card_x0, y0, card_x1, y0 + card_h], STYLE["corner_radius"])
+    draw = ImageDraw.Draw(img)
+
     for i, item in enumerate(items):
         y0 = start_y + i * (card_h + gap)
         draw.rounded_rectangle([card_x0, y0, card_x1, y0 + card_h], radius=STYLE["corner_radius"], fill=(255, 255, 255))
@@ -831,21 +872,28 @@ def render_cta(cta_text: str, cta_line: str, out_path: Path) -> None:
     draw = ImageDraw.Draw(img)
     w, h = CANVAS_SIZE
 
-    font = _font("black", 96)
+    # El degradé va de accent_2 a accent, así que el contraste se calcula
+    # contra el promedio de ambos (sirve tanto en paletas claras como oscuras).
+    medio = tuple((a + b) // 2 for a, b in zip(BRAND["accent_2"], BRAND["accent"]))
+    fg = _contrast_text(medio)
+    fg_dim = tuple(int(c * 0.75 + 128 * 0.25) for c in fg)
+
+    max_w = w - 160
+    font = _fit_font(draw, _clean(cta_text).upper(), "black", 96, max_w)
     top_h = _draw_multiline_centered(
-        draw, _clean(cta_text).upper(), font, w // 2, h // 2 - 60, max_width=w - 160,
-        fill=(15, 15, 25), line_spacing=1.05,
+        draw, _clean(cta_text).upper(), font, w // 2, h // 2 - 60, max_width=max_w,
+        fill=fg, line_spacing=1.05,
     )
 
     sub_font = _font("bold", 46)
     _draw_multiline_centered(
         draw, _clean(cta_line), sub_font, w // 2, h // 2 - 60 + top_h // 2 + 100, max_width=w - 220,
-        fill=(30, 20, 10),
+        fill=fg,
     )
 
     footer_font = _font("regular", 30)
     bbox = draw.textbbox((0, 0), HANDLE, font=footer_font)
     text_w = bbox[2] - bbox[0]
-    draw.text(((w - text_w) // 2, h - 90), HANDLE, font=footer_font, fill=(60, 40, 10))
+    draw.text(((w - text_w) // 2, h - 90), HANDLE, font=footer_font, fill=fg_dim)
 
     img.save(out_path, "PNG")

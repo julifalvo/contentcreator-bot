@@ -47,6 +47,23 @@ SYSTEM_PROMPT = (
     "relacionarse puntualmente con el caso que acabás de contar.\n"
     "- 'caption' es SOLO el texto del posteo, sin hashtags adentro (los hashtags van aparte, en "
     "el campo 'hashtags').\n\n"
+    "GANCHO (esto es lo más importante del video):\n"
+    "- 'portada_text' tiene que golpear con lo que el negocio ESTÁ PERDIENDO HOY, no con lo que "
+    "podría ganar. Comparar el costo de seguir igual contra lo que cuesta resolverlo. Ejemplos "
+    "del tipo de gancho: 'Perdés 3 clientes por semana sin enterarte', 'Ese mensaje sin "
+    "responder se fue a la competencia', 'Cada noche regalás 40 minutos gratis'.\n"
+    "- Escribí en segunda persona ('perdés', 'estás', 'tu negocio'), hablándole directo a quien "
+    "mira, no en tercera persona sobre un caso ajeno.\n"
+    "- La primera slide después de la portada tiene que hacer que la persona se reconozca en el "
+    "problema: describí la escena concreta que vive, no el concepto abstracto.\n"
+    "- El 'caption' cierra con una pregunta incómoda pero honesta, que obligue a la persona a "
+    "poner un número a su propio problema (ej: '¿cuántos mensajes tenés sin responder ahora "
+    "mismo?').\n"
+    "- IMPORTANTE — límite ético: los números tienen que ser del CASO ILUSTRATIVO que estás "
+    "contando, nunca estadísticas generales inventadas presentadas como estudios ('el 87% de "
+    "los negocios...'). Nada de amenazas catastróficas ('vas a fundir'), ni de insultar o "
+    "menospreciar a quien mira. Es incomodar con un costo real y concreto, no asustar con "
+    "mentiras.\n\n"
     "Tenés que responder ÚNICAMENTE con un objeto JSON válido (nada de texto antes o después, "
     "nada de markdown ni ```), con exactamente esta forma:\n"
     "{\n"
@@ -75,15 +92,15 @@ SYSTEM_PROMPT = (
     '"mensaje_cliente": "Hola, no voy a poder ir a mi turno de mañana a las 10", '
     '"respuesta_bot": "Sin problema. Tengo lugar mañana 16hs o el jueves 11hs. ¿Cuál te queda mejor?", '
     '"tiempo_respuesta": "reprogramado en el momento, sin mirar la agenda"},\n'
-    '  "portada_text": "Dejá de mandar los recordatorios uno por uno",\n'
+    '  "portada_text": "Cada noche regalás 40 minutos gratis",\n'
     '  "slides": [\n'
-    '    {"title": "El problema", "text": "12 a 15 mensajes de recordatorio, todas las noches"},\n'
-    '    {"title": "El costo", "text": "40 minutos por noche solo copiando y pegando"},\n'
-    '    {"title": "La solución", "text": "El agente manda el recordatorio y reprograma solo"},\n'
+    '    {"title": "Son las 11 de la noche", "text": "Y seguís copiando y pegando el mismo mensaje"},\n'
+    '    {"title": "Lo que te cuesta", "text": "40 minutos por noche, 4 faltazos igual por semana"},\n'
+    '    {"title": "Lo que cambia", "text": "El agente avisa y reprograma sin que toques nada"},\n'
     '    {"title": "El resultado", "text": "De 4 faltazos por semana a 1"}\n'
     "  ],\n"
-    '  "cta_slide_text": "¿Cuántos recordatorios mandás vos a mano?",\n'
-    '  "caption": "40 minutos por noche mandando el mismo mensaje con distinto horario. Eso es lo primero que automatizaría en cualquier consultorio. ¿Vos todavía confirmás turnos a mano?",\n'
+    '  "cta_slide_text": "¿Cuántas noches más lo vas a hacer a mano?",\n'
+    '  "caption": "40 minutos cada noche mandando el mismo mensaje con distinto horario, y los faltazos igual seguían. Ese tiempo no vuelve. ¿Cuántos turnos tenés sin confirmar ahora mismo?",\n'
     '  "hashtags": ["automatizacion", "agentesdeia", "consultorios", "pymes", "iaparanegocios", "chatbots", "productividad", "whatsappbusiness"]\n'
     "}"
 )
