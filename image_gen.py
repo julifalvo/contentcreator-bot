@@ -369,7 +369,10 @@ def _draw_bubble(
     return top_y + bubble_h
 
 
-def render_demo(canal: str, mensaje_cliente: str, respuesta_bot: str, tiempo_respuesta: str, out_path: Path) -> None:
+def render_demo(
+    canal: str, mensaje_cliente: str, respuesta_bot: str, tiempo_respuesta: str, out_path: Path,
+    demo_caption: str = "ASI RESPONDE UN AGENTE DE IA",
+) -> None:
     """Slide de demo: simula un chat real cliente -> agente de IA. A veces el
     fondo es una foto real (gratis, vía Pollinations.ai) con un velo CLARO
     encima —no oscuro como en los otros mockups— para que siga leyéndose el
@@ -416,10 +419,11 @@ def render_demo(canal: str, mensaje_cliente: str, respuesta_bot: str, tiempo_res
     tbbox = draw.textbbox((0, 0), time_text, font=time_font)
     draw.text((w - 60 - (tbbox[2] - tbbox[0]), bot_bottom + 22), time_text, font=time_font, fill=(120, 124, 140))
 
-    caption_font = _font("black", 58)
+    demo_caption = _clean(demo_caption).upper()
+    caption_font = _fit_font(draw, demo_caption, "black", 58, w - 180)
     caption_y = min(bot_bottom + 280, h - 420)
     _draw_multiline_centered(
-        draw, "ASI RESPONDE UN AGENTE DE IA", caption_font, w // 2, caption_y, max_width=w - 180,
+        draw, demo_caption, caption_font, w // 2, caption_y, max_width=w - 180,
         fill=(22, 24, 36), line_spacing=1.1,
     )
 
@@ -453,7 +457,7 @@ COVER_LAYOUTS = ("centrado", "izquierda", "bloque")
 
 def render_cover(
     portada_text: str, pillar_label: str, pillar_emoji: str, out_path: Path,
-    layout: str = "centrado",
+    layout: str = "centrado", swipe_hint: str = "TOCA PARA VER COMO",
 ) -> None:
     """Portada del carrusel. `layout` cambia la composición del gancho."""
     img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
@@ -461,6 +465,7 @@ def render_cover(
     w, h = CANVAS_SIZE
     margin = 90
     hook = _clean(portada_text).upper()
+    swipe_hint = _clean(swipe_hint).upper()
 
     if layout == "izquierda":
         _draw_badge(draw, f"• {pillar_label.upper()}", margin, 90)
@@ -476,7 +481,7 @@ def render_cover(
         )
         sub_font = _font("bold", 40)
         _draw_multiline_left(
-            draw, "TOCA PARA VER COMO", sub_font, margin, h - 300, max_w,
+            draw, swipe_hint, sub_font, margin, h - 300, max_w,
             fill=BRAND["accent"],
         )
         arrow_x, arrow_y = margin + 8, h - 232
@@ -503,7 +508,7 @@ def render_cover(
         )
         sub_font = _font("bold", 40)
         _draw_multiline_centered(
-            draw, "TOCA PARA VER COMO", sub_font, w // 2, h - 260, max_width=w - 200,
+            draw, swipe_hint, sub_font, w // 2, h - 260, max_width=w - 200,
             fill=BRAND["accent"],
         )
         arrow_y = h - 218
@@ -522,7 +527,7 @@ def render_cover(
         )
         sub_font = _font("bold", 40)
         _draw_multiline_centered(
-            draw, "TOCA PARA VER COMO", sub_font, w // 2, h - 260, max_width=w - 200,
+            draw, swipe_hint, sub_font, w // 2, h - 260, max_width=w - 200,
             fill=BRAND["accent"],
         )
         # Flechita dibujada a mano (no como glifo de texto): algunas de las fuentes

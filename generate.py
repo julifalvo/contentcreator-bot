@@ -71,7 +71,11 @@ def build_piece(pillar_key: str, modo: str) -> Path:
     # --- Texto ---
     hashtags = content["hashtags"] or HASHTAGS_BASE
     hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in hashtags)
-    cta = random.choice(CTAS)
+    # Estos tres los decide la IA cuando genera el contenido; el fallback es
+    # solo para el modo 'gratis' (banco local), que no los trae.
+    cta = content.get("cta_final") or random.choice(CTAS)
+    swipe_hint = content.get("swipe_hint") or "TOCA PARA VER COMO"
+    demo_caption = content.get("demo_caption") or "ASI RESPONDE UN AGENTE DE IA"
 
     demo = content["demo"]
     mockup_labels = {"web": "mockup de sitio web", "bot": "mockup de flujo automatizado", "agente": "mockup de agente de recomendaciones"}
@@ -113,7 +117,7 @@ def build_piece(pillar_key: str, modo: str) -> Path:
         if token == "portada":
             render_cover(
                 content["portada_text"], pillar["label"], pillar["emoji"], next_path("portada"),
-                layout=random.choice(COVER_LAYOUTS),
+                layout=random.choice(COVER_LAYOUTS), swipe_hint=swipe_hint,
             )
             script_lines.append(f'Slide {img_index} (portada): "{content["portada_text"]}"')
 
@@ -129,7 +133,7 @@ def build_piece(pillar_key: str, modo: str) -> Path:
         elif token == "demo":
             render_demo(
                 demo["canal"], demo["mensaje_cliente"], demo["respuesta_bot"], demo["tiempo_respuesta"],
-                next_path("demo"),
+                next_path("demo"), demo_caption=demo_caption,
             )
             script_lines.append(
                 f'Slide {img_index} (demo, chat {demo["canal"]}):\n'
@@ -189,11 +193,11 @@ def main() -> None:
     )
     parser.add_argument("--count", type=int, default=1, help="Cantidad de piezas a generar")
     parser.add_argument(
-        "--modo", default="gratis", choices=["gratis", "ollama", "ia"],
+        "--modo", default="ollama", choices=["gratis", "ollama", "ia"],
         help=(
-            "'gratis' usa un banco local de casos, sin costo (default). "
-            "'ollama' genera contenido dinámico con un modelo local (gratis, requiere Ollama corriendo). "
-            "'ia' genera con Claude, consume créditos."
+            "'ollama' (default) genera TODO el contenido con un modelo local, gratis "
+            "(requiere Ollama corriendo). 'gratis' usa el banco local de casos escritos a mano, "
+            "sin IA ni red. 'ia' genera con Claude, consume créditos."
         ),
     )
     parser.add_argument(

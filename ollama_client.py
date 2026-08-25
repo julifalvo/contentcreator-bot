@@ -80,6 +80,9 @@ SYSTEM_PROMPT = (
     "    ... exactamente 4 elementos (problema -> consecuencia -> solución -> resultado con número)\n"
     "  ],\n"
     '  "cta_slide_text": "string corto para la slide final",\n'
+    '  "cta_final": "string, la línea de acción concreta bajo el CTA (ej: \'Escribime y te digo cuánto estás perdiendo\'). Máx 9 palabras",\n'
+    '  "swipe_hint": "string en MAYÚSCULAS, máx 5 palabras, invita a seguir mirando el carrusel (ej: \'MIRÁ LO QUE PASÓ\'). Sin flechas ni emojis",\n'
+    '  "demo_caption": "string en MAYÚSCULAS, máx 7 palabras, el remate que va debajo del chat del demo (ej: \'CONTESTÓ ANTES QUE VOS\')",\n'
     '  "caption": "string, 2-4 líneas, termina con una pregunta concreta",\n'
     '  "hashtags": ["8 a 10 strings sin el símbolo #"]\n'
     "}\n\n"
@@ -100,6 +103,9 @@ SYSTEM_PROMPT = (
     '    {"title": "El resultado", "text": "De 4 faltazos por semana a 1"}\n'
     "  ],\n"
     '  "cta_slide_text": "¿Cuántas noches más lo vas a hacer a mano?",\n'
+    '  "cta_final": "Contame tu caso y te digo por dónde empezar",\n'
+    '  "swipe_hint": "MIRÁ CÓMO SE RESUELVE",\n'
+    '  "demo_caption": "RESPONDIÓ SIN QUE NADIE MIRARA",\n'
     '  "caption": "40 minutos cada noche mandando el mismo mensaje con distinto horario, y los faltazos igual seguían. Ese tiempo no vuelve. ¿Cuántos turnos tenés sin confirmar ahora mismo?",\n'
     '  "hashtags": ["automatizacion", "agentesdeia", "consultorios", "pymes", "iaparanegocios", "chatbots", "productividad", "whatsappbusiness"]\n'
     "}"

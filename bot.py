@@ -45,7 +45,7 @@ HELP_TEXT = (
     "Comandos:\n"
     "/generar [pilar] [modo] [fondos] - genera una pieza y la manda a aprobar\n"
     f"  pilar: {', '.join(list(PILLARS.keys()) + ['random'])} (default: random)\n"
-    f"  modo: {', '.join(MODOS_VALIDOS)} (default: gratis)\n"
+    f"  modo: {', '.join(MODOS_VALIDOS)} (default: ollama, la IA decide todo el contenido)\n"
     f"  fondos: {', '.join(FONDOS_VALIDOS)} (default: auto) - foto real (gratis) en mockups de bot/agente\n"
     "/pilares - lista los pilares\n"
     "/ayuda - este mensaje"
@@ -64,7 +64,7 @@ def _handle_generar(args: list[str]) -> None:
         return
 
     pillar_key = args[0] if len(args) >= 1 else "random"
-    modo = args[1] if len(args) >= 2 else "gratis"
+    modo = args[1] if len(args) >= 2 else "ollama"
     fondos = args[2] if len(args) >= 3 else "auto"
 
     if pillar_key == "random":
