@@ -1,0 +1,15 @@
+.env
+*.env.local
+__pycache__/
+*.pyc
+_legal_repo/
+output/
+music/*
+!music/.gitkeep
+tiktok_tokens.json
+tiktok*.txt
+*.jfif
+*.jpg
+*.jpeg
+demo_tiktok_compressed.mp4
+Grabaci*.mp4

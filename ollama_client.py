@@ -1,0 +1,243 @@
+"""Generación de guiones/textos para TikTok usando un modelo local con Ollama.
+
+100% gratis: corre en tu PC, sin API key, sin registro, sin créditos de
+Anthropic ni de nadie. Requiere tener Ollama instalado y corriendo
+(https://ollama.com) y el modelo ya descargado (`ollama pull <modelo>`).
+
+A diferencia de ai_client.py (Claude, con output_config de json_schema
+estricto), acá el modelo solo garantiza JSON *válido* (format="json"), no que
+respete el esquema exacto — por eso se valida la respuesta y se reintenta un
+par de veces si falta algún campo.
+"""
+
+import json
+import os
+
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
+MAX_RETRIES = 3
+
+SYSTEM_PROMPT = (
+    "Sos alguien que arma agentes de IA y automatizaciones para negocios chicos y medianos, "
+    "y contás en TikTok lo que vas aprendiendo en el camino. No sos un community manager ni "
+    "una agencia de marketing: hablás como hablarías con un cliente en un café, contando un "
+    "caso concreto, no vendiendo un curso.\n\n"
+    "IMPORTANTE sobre el formato: el video NO tiene voz en off ni guion hablado. Es un carrusel "
+    "de imágenes con música de fondo — la persona no lee nada en voz alta. Eso significa que "
+    "TODO lo que el espectador va a entender tiene que estar en el texto de las slides.\n\n"
+    "Reglas duras de estilo:\n"
+    "- Prohibido el lenguaje de marketing vacío: 'revolucioná tu negocio', 'llevá tu negocio "
+    "al siguiente nivel', 'en la era digital', 'maximizá resultados', 'no te quedes atrás', "
+    "'la clave del éxito', o cualquier frase que sonaría igual en cualquier rubro.\n"
+    "- Cada pieza tiene que incluir un DEMO real y específico: un intercambio concreto de "
+    "mensajes (cliente escribe algo puntual, el agente responde algo puntual), con un rubro "
+    "de negocio específico y DISTINTO cada vez (variá el rubro: no repitas 'vivero' ni "
+    "'consultorio odontológico' si ya los usaste antes) — no 'un negocio' genérico.\n"
+    "- Usá números y detalles concretos siempre que se pueda (tiempos, cantidad de mensajes, "
+    "horarios), nunca 'mucho', 'rápido' o 'fácil' sin un dato al lado.\n"
+    "- Texto natural, como lo escribiría una persona, no un folleto corporativo. Frases cortas "
+    "pero completas (sujeto + verbo): nunca palabras sueltas o fragmentos telegráficos como "
+    "'Tarea repetitiva' o 'Demora tiempo'.\n"
+    "- 'cta_slide_text' no puede ser genérico ('Ver más', 'Conocé más', 'Info aquí'): tiene que "
+    "relacionarse puntualmente con el caso que acabás de contar.\n"
+    "- 'caption' es SOLO el texto del posteo, sin hashtags adentro (los hashtags van aparte, en "
+    "el campo 'hashtags').\n\n"
+    "Tenés que responder ÚNICAMENTE con un objeto JSON válido (nada de texto antes o después, "
+    "nada de markdown ni ```), con exactamente esta forma:\n"
+    "{\n"
+    '  "negocio_ejemplo": "string, ej: \'un local de indumentaria\'",\n'
+    '  "demo": {\n'
+    '    "canal": "string, ej: \'WhatsApp\'",\n'
+    '    "mensaje_cliente": "string, máx 18 palabras",\n'
+    '    "respuesta_bot": "string, máx 22 palabras",\n'
+    '    "tiempo_respuesta": "string, ej: \'en 4 segundos\'"\n'
+    "  },\n"
+    '  "portada_text": "string, máx 8 palabras, el gancho del video",\n'
+    '  "slides": [\n'
+    '    {"title": "string, máx 6 palabras", "text": "string, máx 14 palabras"},\n'
+    "    ... exactamente 4 elementos (problema -> consecuencia -> solución -> resultado con número)\n"
+    "  ],\n"
+    '  "cta_slide_text": "string corto para la slide final",\n'
+    '  "caption": "string, 2-4 líneas, termina con una pregunta concreta",\n'
+    '  "hashtags": ["8 a 10 strings sin el símbolo #"]\n'
+    "}\n\n"
+    "Ejemplo del NIVEL de detalle y tono que se espera (no copies el rubro, "
+    "inventá uno distinto, pero imitá exactamente este estilo de oraciones "
+    "completas y específicas):\n"
+    "{\n"
+    '  "negocio_ejemplo": "un consultorio de kinesiología",\n'
+    '  "demo": {"canal": "WhatsApp", '
+    '"mensaje_cliente": "Hola, no voy a poder ir a mi turno de mañana a las 10", '
+    '"respuesta_bot": "Sin problema. Tengo lugar mañana 16hs o el jueves 11hs. ¿Cuál te queda mejor?", '
+    '"tiempo_respuesta": "reprogramado en el momento, sin mirar la agenda"},\n'
+    '  "portada_text": "Dejá de mandar los recordatorios uno por uno",\n'
+    '  "slides": [\n'
+    '    {"title": "El problema", "text": "12 a 15 mensajes de recordatorio, todas las noches"},\n'
+    '    {"title": "El costo", "text": "40 minutos por noche solo copiando y pegando"},\n'
+    '    {"title": "La solución", "text": "El agente manda el recordatorio y reprograma solo"},\n'
+    '    {"title": "El resultado", "text": "De 4 faltazos por semana a 1"}\n'
+    "  ],\n"
+    '  "cta_slide_text": "¿Cuántos recordatorios mandás vos a mano?",\n'
+    '  "caption": "40 minutos por noche mandando el mismo mensaje con distinto horario. Eso es lo primero que automatizaría en cualquier consultorio. ¿Vos todavía confirmás turnos a mano?",\n'
+    '  "hashtags": ["automatizacion", "agentesdeia", "consultorios", "pymes", "iaparanegocios", "chatbots", "productividad", "whatsappbusiness"]\n'
+    "}"
+)
+
+_REQUIRED_TOP = {"negocio_ejemplo", "demo", "portada_text", "slides", "cta_slide_text", "caption", "hashtags"}
+_REQUIRED_DEMO = {"canal", "mensaje_cliente", "respuesta_bot", "tiempo_respuesta"}
+_REQUIRED_SLIDE = {"title", "text"}
+
+
+def _validate(data: dict) -> None:
+    missing = _REQUIRED_TOP - data.keys()
+    if missing:
+        raise ValueError(f"Faltan campos: {missing}")
+    if _REQUIRED_DEMO - data["demo"].keys():
+        raise ValueError("El campo 'demo' está incompleto")
+    if not isinstance(data["slides"], list) or len(data["slides"]) < 4:
+        raise ValueError("'slides' tiene que ser una lista de al menos 4 elementos")
+    for s in data["slides"]:
+        if _REQUIRED_SLIDE - s.keys():
+            raise ValueError("Alguna slide no tiene 'title'/'text'")
+    if not isinstance(data["hashtags"], list) or not data["hashtags"]:
+        raise ValueError("'hashtags' tiene que ser una lista no vacía")
+
+
+def _ping_ollama() -> None:
+    try:
+        requests.get(f"{OLLAMA_HOST}/api/tags", timeout=5).raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(
+            f"No se pudo conectar a Ollama en {OLLAMA_HOST}. ¿Está corriendo? "
+            "Abrí la app de Ollama o corré 'ollama serve'."
+        ) from e
+
+
+def _chat_json(system: str, user: str, validate) -> dict:
+    """Le pide al modelo local un JSON, valida con `validate(data)` (debe tirar
+    ValueError si falta algo) y reintenta unas veces si sale mal formado."""
+    _ping_ollama()
+    last_error: Exception | None = None
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        resp = requests.post(
+            f"{OLLAMA_HOST}/api/chat",
+            json={
+                "model": OLLAMA_MODEL,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "format": "json",
+                "stream": False,
+                "options": {"temperature": 0.9},
+            },
+            timeout=300,
+        )
+        resp.raise_for_status()
+        raw = resp.json()["message"]["content"]
+
+        try:
+            data = json.loads(raw)
+            validate(data)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {attempt}/{MAX_RETRIES} con Ollama falló: {e}, reintentando...)")
+
+    raise RuntimeError(
+        f"El modelo local ({OLLAMA_MODEL}) no devolvió un JSON válido tras {MAX_RETRIES} intentos: {last_error}"
+    )
+
+
+def generate_content(pillar_label: str, angle: str) -> dict:
+    """Pide al modelo local (vía Ollama) un paquete completo de contenido. Costo: $0."""
+    user_prompt = (
+        f"Pilar de contenido: {pillar_label}.\n"
+        f"Ángulo del video: {angle}\n\n"
+        "Elegí un rubro de negocio concreto y específico (uno distinto cada vez, no siempre el "
+        "mismo) y armá el contenido para un video sin voz en off, contado a través de ese rubro "
+        "y de un demo real de conversación cliente-agente. Nada de lenguaje de marketing "
+        "genérico. Respondé solo con el JSON pedido, sin texto extra."
+    )
+    return _chat_json(SYSTEM_PROMPT, user_prompt, _validate)
+
+
+_MOCKUP_SPECS = {
+    "web": {
+        "campos": (
+            '{"url": "string corto, ej: pedidos.tunegocio.com", '
+            '"headline": "máx 8 palabras", "subheadline": "máx 10 palabras", '
+            '"cta": "máx 4 palabras", "features": ["exactamente 3 strings cortos, máx 4 palabras cada uno"], '
+            '"caption": "una sola oración natural que explica qué se ve, mencionando el rubro del negocio"}'
+        ),
+        "ejemplo": (
+            '{"url": "turnos.tunegocio.com", "headline": "Sacá turno sin esperar que atiendan", '
+            '"subheadline": "Ves los horarios libres al toque", "cta": "Ver horarios", '
+            '"features": ["Horarios reales", "Confirmación automática", "Reprogramar fácil"], '
+            '"caption": "Así podría verse la web de un consultorio de kinesiología, directa y sin vueltas"}'
+        ),
+        "required": {"url", "headline", "subheadline", "cta", "features", "caption"},
+    },
+    "bot": {
+        "campos": (
+            '{"steps": ["exactamente 4 strings, cada uno un paso corto del flujo, en orden"], '
+            '"caption": "una sola oración natural que explica qué se ve, mencionando el rubro del negocio"}'
+        ),
+        "ejemplo": (
+            '{"steps": ["Se acerca la fecha del turno", "El sistema arma el recordatorio", '
+            '"Lo manda por WhatsApp", "Reprograma si hace falta"], '
+            '"caption": "Así es el flujo por detrás en un consultorio de kinesiología, nadie lo ve pero corre solo"}'
+        ),
+        "required": {"steps", "caption"},
+    },
+    "agente": {
+        "campos": (
+            '{"items": ["exactamente 3 objetos con name (máx 3 palabras), '
+            'price (ej: $8.500), match (ej: 92% match)"], '
+            '"caption": "una sola oración natural que explica qué se ve, mencionando el rubro del negocio"}'
+        ),
+        "ejemplo": (
+            '{"items": [{"name": "Plan inicial", "price": "$5.000", "match": "90% match"}, '
+            '{"name": "Plan recomendado", "price": "$12.000", "match": "94% match"}, '
+            '{"name": "Plan completo", "price": "$19.500", "match": "82% match"}], '
+            '"caption": "Así arma las recomendaciones un agente de IA para un consultorio de kinesiología"}'
+        ),
+        "required": {"items", "caption"},
+    },
+}
+
+
+def generate_mockup_content(negocio_ejemplo: str, kind: str) -> dict:
+    """Genera el contenido (ficticio, ilustrativo) de un mockup de solución
+    ('web', 'bot' o 'agente') con el modelo local. Costo: $0."""
+    spec = _MOCKUP_SPECS[kind]
+
+    system = (
+        "Generás el contenido de ejemplo (ficticio, ilustrativo) que se muestra dentro de un "
+        f"mockup gráfico de tipo '{kind}' para un video de TikTok sobre automatización/IA para "
+        "negocios. Respondé ÚNICAMENTE con un objeto JSON válido (nada de texto ni markdown "
+        "antes o después), con EXACTAMENTE esta forma (todos los campos son obligatorios, "
+        "incluido \"caption\"):\n"
+        f"{spec['campos']}\n\n"
+        "Ejemplo de estilo (no copies el contenido, inventá otro específico para el rubro indicado, "
+        "pero incluí SIEMPRE los mismos campos, caption incluido):\n"
+        f"{spec['ejemplo']}"
+    )
+    user = f"Rubro del negocio: {negocio_ejemplo}."
+
+    def _validate_mockup(data: dict) -> None:
+        missing = spec["required"] - data.keys()
+        if missing:
+            raise ValueError(f"Faltan campos: {missing}")
+        if "caption" not in data:
+            raise ValueError("Falta 'caption'")
+
+    data = _chat_json(system, user, _validate_mockup)
+    data["kind"] = kind
+    return data
