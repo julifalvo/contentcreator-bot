@@ -29,6 +29,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 from config import CTAS, FONT_SETS, HASHTAGS_BASE, NARRATIVE_TEMPLATES, PALETTES, PILLARS, STYLES
 from image_gen import (
+    COVER_LAYOUTS, SLIDE_LAYOUTS,
     render_cover, render_cta, render_demo, render_photo_slide, render_slide, render_solution_mockup,
     set_fonts, set_palette, set_photo_bg_chance, set_style,
 )
@@ -86,6 +87,7 @@ def build_piece(pillar_key: str, modo: str) -> Path:
     # --- Gráficos + guion, recorriendo la plantilla narrativa elegida ---
     img_index = 0
     slide_position = 0
+    last_layout: str | None = None
     script_lines: list[str] = []
 
     def next_path(suffix: str) -> Path:
@@ -93,16 +95,27 @@ def build_piece(pillar_key: str, modo: str) -> Path:
         img_index += 1
         return folder / f"{img_index:02d}_{suffix}.png"
 
+    def next_layout() -> str:
+        """Sortea una composición para el slide, evitando repetir la anterior
+        para que dos slides seguidos nunca se vean igual."""
+        nonlocal last_layout
+        opciones = [l for l in SLIDE_LAYOUTS if l != last_layout]
+        last_layout = random.choice(opciones)
+        return last_layout
+
     for token in template:
         if token == "portada":
-            render_cover(content["portada_text"], pillar["label"], pillar["emoji"], next_path("portada"))
+            render_cover(
+                content["portada_text"], pillar["label"], pillar["emoji"], next_path("portada"),
+                layout=random.choice(COVER_LAYOUTS),
+            )
             script_lines.append(f'Slide {img_index} (portada): "{content["portada_text"]}"')
 
         elif token.startswith("slide:"):
             slide = slides[int(token.split(":")[1])]
             render_slide(
                 slide["title"], slide["text"], slide_position, total_slides_in_template,
-                pillar["emoji"], next_path("slide"),
+                pillar["emoji"], next_path("slide"), layout=next_layout(),
             )
             script_lines.append(f'Slide {img_index}: "{slide["title"]}" — {slide["text"]}')
             slide_position += 1

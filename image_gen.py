@@ -181,6 +181,44 @@ def _wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFon
     return lines
 
 
+def _fit_font(
+    draw: ImageDraw.ImageDraw, text: str, kind: str, size: int, max_width: int, min_size: int = 48
+) -> ImageFont.FreeTypeFont:
+    """Devuelve la fuente en el tamaño pedido, achicándola si alguna palabra
+    suelta no entra en `max_width` (el wrap no puede cortar palabras, así que
+    sin esto una palabra larga se desborda del bloque)."""
+    size_actual = size
+    while size_actual > min_size:
+        font = _font(kind, size_actual)
+        longest = max(
+            (draw.textbbox((0, 0), word, font=font)[2] - draw.textbbox((0, 0), word, font=font)[0])
+            for word in text.split()
+        )
+        if longest <= max_width:
+            return font
+        size_actual -= 4
+    return _font(kind, min_size)
+
+
+def _draw_multiline_left(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    x: int,
+    top_y: int,
+    max_width: int,
+    fill,
+    line_spacing: float = 1.15,
+) -> int:
+    """Dibuja texto alineado a la izquierda desde `top_y` hacia abajo.
+    Devuelve la altura total ocupada."""
+    lines = _wrap_text(draw, text, font, max_width)
+    line_height = int((font.getbbox("Ay")[3] - font.getbbox("Ay")[1]) * line_spacing)
+    for i, line in enumerate(lines):
+        draw.text((x, top_y + i * line_height), line, font=font, fill=fill)
+    return line_height * len(lines)
+
+
 def _draw_multiline_centered(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -378,56 +416,199 @@ def _draw_accent(draw: ImageDraw.ImageDraw, x: int, y: int) -> None:
         draw.rectangle([x, y, x + 140, y + 10], fill=color)
 
 
-def render_cover(portada_text: str, pillar_label: str, pillar_emoji: str, out_path: Path) -> None:
+COVER_LAYOUTS = ("centrado", "izquierda", "bloque")
+
+
+def render_cover(
+    portada_text: str, pillar_label: str, pillar_emoji: str, out_path: Path,
+    layout: str = "centrado",
+) -> None:
+    """Portada del carrusel. `layout` cambia la composición del gancho."""
     img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
     draw = ImageDraw.Draw(img)
     w, h = CANVAS_SIZE
+    margin = 90
+    hook = _clean(portada_text).upper()
 
-    _draw_badge(draw, f"• {pillar_label.upper()}", 60, 90)
-    _draw_accent(draw, 60, h // 2 - 260)
+    if layout == "izquierda":
+        _draw_badge(draw, f"• {pillar_label.upper()}", margin, 90)
+        max_w = w - margin * 2
+        font = _fit_font(draw, hook, "black", 108, max_w)
+        title_h = _text_block_height(draw, hook, font, max_w, 1.06)
+        # Anclado abajo, dejando aire arriba (estilo portada editorial)
+        title_top = h - 420 - title_h
+        _draw_accent(draw, margin, title_top - 70)
+        _draw_multiline_left(
+            draw, hook, font, margin, title_top, max_w,
+            fill=BRAND["text"], line_spacing=1.06,
+        )
+        sub_font = _font("bold", 40)
+        _draw_multiline_left(
+            draw, "TOCA PARA VER COMO", sub_font, margin, h - 300, max_w,
+            fill=BRAND["accent"],
+        )
+        arrow_x, arrow_y = margin + 8, h - 232
+        draw.polygon(
+            [(arrow_x - 16, arrow_y), (arrow_x + 16, arrow_y), (arrow_x, arrow_y + 22)],
+            fill=BRAND["accent"],
+        )
 
-    font = _font("black", 104)
-    _draw_multiline_centered(
-        draw, _clean(portada_text).upper(), font, w // 2, h // 2, max_width=w - 160,
-        fill=BRAND["text"], line_spacing=1.08,
-    )
+    elif layout == "bloque":
+        _draw_badge(draw, f"• {pillar_label.upper()}", margin, 90)
+        pad_block = 56
+        max_w = w - margin * 2 - pad_block * 2
+        font = _fit_font(draw, hook, "black", 100, max_w)
+        title_h = _text_block_height(draw, hook, font, max_w, 1.08)
+        block_top = (h - (title_h + pad_block * 2)) // 2 - 60
+        # Panel sólido detrás del título, con texto en color de fondo (alto contraste)
+        draw.rounded_rectangle(
+            [margin, block_top, w - margin, block_top + title_h + pad_block * 2],
+            radius=STYLE["corner_radius"], fill=BRAND["accent"],
+        )
+        _draw_multiline_left(
+            draw, hook, font, margin + pad_block, block_top + pad_block, max_w,
+            fill=BRAND["bg_top"], line_spacing=1.08,
+        )
+        sub_font = _font("bold", 40)
+        _draw_multiline_centered(
+            draw, "TOCA PARA VER COMO", sub_font, w // 2, h - 260, max_width=w - 200,
+            fill=BRAND["accent"],
+        )
+        arrow_y = h - 218
+        draw.polygon(
+            [(w // 2 - 16, arrow_y), (w // 2 + 16, arrow_y), (w // 2, arrow_y + 22)],
+            fill=BRAND["accent"],
+        )
 
-    sub_font = _font("bold", 40)
-    _draw_multiline_centered(
-        draw, "TOCA PARA VER COMO", sub_font, w // 2, h - 260, max_width=w - 200,
-        fill=BRAND["accent"],
-    )
-    # Flechita dibujada a mano (no como glifo de texto): algunas de las fuentes
-    # decorativas de FONT_SETS no traen el carácter ↓.
-    arrow_y = h - 218
-    draw.polygon(
-        [(w // 2 - 16, arrow_y), (w // 2 + 16, arrow_y), (w // 2, arrow_y + 22)],
-        fill=BRAND["accent"],
-    )
+    else:  # "centrado" — la composición original
+        _draw_badge(draw, f"• {pillar_label.upper()}", 60, 90)
+        _draw_accent(draw, 60, h // 2 - 260)
+        font = _font("black", 104)
+        _draw_multiline_centered(
+            draw, hook, font, w // 2, h // 2, max_width=w - 160,
+            fill=BRAND["text"], line_spacing=1.08,
+        )
+        sub_font = _font("bold", 40)
+        _draw_multiline_centered(
+            draw, "TOCA PARA VER COMO", sub_font, w // 2, h - 260, max_width=w - 200,
+            fill=BRAND["accent"],
+        )
+        # Flechita dibujada a mano (no como glifo de texto): algunas de las fuentes
+        # decorativas de FONT_SETS no traen el carácter ↓.
+        arrow_y = h - 218
+        draw.polygon(
+            [(w // 2 - 16, arrow_y), (w // 2 + 16, arrow_y), (w // 2, arrow_y + 22)],
+            fill=BRAND["accent"],
+        )
 
     _draw_footer(draw)
     img.save(out_path, "PNG")
 
 
-def render_slide(title: str, text: str, index: int, total: int, pillar_emoji: str, out_path: Path) -> None:
+SLIDE_LAYOUTS = ("centrado", "izquierda", "numero", "barra", "abajo")
+
+
+def render_slide(
+    title: str, text: str, index: int, total: int, pillar_emoji: str, out_path: Path,
+    layout: str = "centrado",
+) -> None:
+    """Dibuja un slide de contenido. `layout` cambia la composición (dónde y
+    cómo se ubican título y texto) para que el carrusel no sea siempre la
+    misma imagen con distinto texto."""
     img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
     draw = ImageDraw.Draw(img)
     w, h = CANVAS_SIZE
+    margin = 90
+    max_w = w - margin * 2
 
-    _draw_badge(draw, f"• {index + 1}/{total}", 60, 90)
+    if layout == "izquierda":
+        _draw_badge(draw, f"• {index + 1}/{total}", margin, 90)
+        title_font = _fit_font(draw, _clean(title).upper(), "black", 88, max_w)
+        body_font = _font("regular", 52)
+        title_h = _text_block_height(draw, _clean(title).upper(), title_font, max_w, 1.05)
+        body_h = _text_block_height(draw, _clean(text), body_font, max_w - 40, 1.3)
+        block_top = (h - (title_h + 60 + body_h)) // 2
+        _draw_multiline_left(
+            draw, _clean(title).upper(), title_font, margin, block_top, max_w,
+            fill=BRAND["accent"], line_spacing=1.05,
+        )
+        _draw_multiline_left(
+            draw, _clean(text), body_font, margin, block_top + title_h + 60, max_w - 40,
+            fill=BRAND["text"], line_spacing=1.3,
+        )
 
-    title_font = _font("black", 84)
-    title_h = _draw_multiline_centered(
-        draw, _clean(title).upper(), title_font, w // 2, h // 2 - 120, max_width=w - 160,
-        fill=BRAND["accent"], line_spacing=1.05,
-    )
+    elif layout == "numero":
+        num_font = _font("black", 300)
+        num_text = str(index + 1)
+        nbbox = draw.textbbox((0, 0), num_text, font=num_font)
+        draw.text((margin - 10, 150), num_text, font=num_font, fill=BRAND["accent"])
+        num_bottom = 150 + (nbbox[3] - nbbox[1]) + 90
 
-    body_font = _font("regular", 52)
-    body_y = h // 2 - 120 + title_h // 2 + 110
-    _draw_multiline_centered(
-        draw, _clean(text), body_font, w // 2, body_y, max_width=w - 220,
-        fill=BRAND["text"], line_spacing=1.3,
-    )
+        title_font = _fit_font(draw, _clean(title).upper(), "black", 80, max_w)
+        body_font = _font("regular", 50)
+        title_h = _draw_multiline_left(
+            draw, _clean(title).upper(), title_font, margin, num_bottom, max_w,
+            fill=BRAND["text"], line_spacing=1.05,
+        )
+        _draw_multiline_left(
+            draw, _clean(text), body_font, margin, num_bottom + title_h + 50, max_w - 40,
+            fill=BRAND["text_dim"], line_spacing=1.3,
+        )
+
+    elif layout == "barra":
+        _draw_badge(draw, f"• {index + 1}/{total}", margin, 90)
+        bar_x = margin
+        text_x = margin + 46
+        text_w = w - text_x - margin
+        title_font = _fit_font(draw, _clean(title).upper(), "black", 86, text_w)
+        body_font = _font("regular", 52)
+        title_h = _text_block_height(draw, _clean(title).upper(), title_font, text_w, 1.05)
+        body_h = _text_block_height(draw, _clean(text), body_font, text_w - 40, 1.3)
+        block_top = (h - (title_h + 55 + body_h)) // 2
+        # Barra vertical de acento a la izquierda de todo el bloque
+        draw.rounded_rectangle(
+            [bar_x, block_top, bar_x + 14, block_top + title_h + 55 + body_h],
+            radius=7, fill=BRAND["accent"],
+        )
+        _draw_multiline_left(
+            draw, _clean(title).upper(), title_font, text_x, block_top, text_w,
+            fill=BRAND["text"], line_spacing=1.05,
+        )
+        _draw_multiline_left(
+            draw, _clean(text), body_font, text_x, block_top + title_h + 55, text_w - 40,
+            fill=BRAND["text_dim"], line_spacing=1.3,
+        )
+
+    elif layout == "abajo":
+        _draw_badge(draw, f"• {index + 1}/{total}", margin, 90)
+        title_font = _fit_font(draw, _clean(title).upper(), "black", 92, max_w)
+        body_font = _font("regular", 52)
+        title_h = _text_block_height(draw, _clean(title).upper(), title_font, max_w, 1.05)
+        body_h = _text_block_height(draw, _clean(text), body_font, max_w - 40, 1.3)
+        block_bottom = h - 300
+        block_top = block_bottom - (title_h + 55 + body_h)
+        _draw_multiline_left(
+            draw, _clean(title).upper(), title_font, margin, block_top, max_w,
+            fill=BRAND["accent"], line_spacing=1.05,
+        )
+        _draw_multiline_left(
+            draw, _clean(text), body_font, margin, block_top + title_h + 55, max_w - 40,
+            fill=BRAND["text"], line_spacing=1.3,
+        )
+
+    else:  # "centrado" — la composición original
+        _draw_badge(draw, f"• {index + 1}/{total}", 60, 90)
+        title_font = _font("black", 84)
+        title_h = _draw_multiline_centered(
+            draw, _clean(title).upper(), title_font, w // 2, h // 2 - 120, max_width=w - 160,
+            fill=BRAND["accent"], line_spacing=1.05,
+        )
+        body_font = _font("regular", 52)
+        body_y = h // 2 - 120 + title_h // 2 + 110
+        _draw_multiline_centered(
+            draw, _clean(text), body_font, w // 2, body_y, max_width=w - 220,
+            fill=BRAND["text"], line_spacing=1.3,
+        )
 
     _draw_dots(draw, total, index)
     _draw_footer(draw)
