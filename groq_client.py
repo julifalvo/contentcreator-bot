@@ -240,10 +240,37 @@ def _validate(data: dict) -> None:
             raise ValueError(f"Hashtag inválido: {h!r}")
 
 
+# Groq (free tier) rechaza de entrada cualquier pedido cuyo input + max_tokens
+# supere este techo — no es un límite de acumulado por minuto (ese es el 429,
+# que ya se maneja abajo), es un tope duro por request (413). El SYSTEM_PROMPT
+# se edita seguido y cada regla nueva le resta presupuesto a la respuesta, así
+# que max_tokens se calcula en cada pedido en vez de ser un número fijo que se
+# rompe en silencio la próxima vez que el prompt crezca.
+_TOPE_TOKENS_REQUEST = 8000
+_MARGEN_SEGURIDAD = 250
+_MAX_TOKENS_TECHO = 6000
+_MAX_TOKENS_PISO = 3000  # con menos que esto, gpt-oss se queda sin lugar para razonar y cerrar el JSON
+
+
+def _estimar_tokens(texto: str) -> int:
+    """Estimación gruesa (no hay tokenizer real instalado): ~3.3 caracteres
+    por token le sale bien al castellano con acentos. Mejor sobreestimar un
+    poco que quedarse corto y comerse un 413."""
+    return int(len(texto) / 3.3) + 20  # +20 de margen por el overhead de formato del mensaje
+
+
 def _post_con_espera(user: str, max_esperas: int = 4) -> requests.Response:
     """Hace el pedido a Groq, respetando el límite de tokens por minuto del
     free tier (8000 TPM). Cuando devuelve 429 avisa cuántos segundos faltan:
     en vez de fallar, esperamos ese rato y reintentamos."""
+    input_tokens = _estimar_tokens(SYSTEM_PROMPT) + _estimar_tokens(user)
+    max_tokens = max(_MAX_TOKENS_PISO, min(_MAX_TOKENS_TECHO, _TOPE_TOKENS_REQUEST - _MARGEN_SEGURIDAD - input_tokens))
+    if input_tokens + _MAX_TOKENS_PISO > _TOPE_TOKENS_REQUEST:
+        raise RuntimeError(
+            f"El SYSTEM_PROMPT (~{input_tokens} tokens estimados) ya no deja lugar ni para el "
+            f"mínimo de {_MAX_TOKENS_PISO} tokens de respuesta. Hay que acortar el prompt."
+        )
+
     for _ in range(max_esperas):
         resp = requests.post(
             API_URL,
@@ -261,7 +288,7 @@ def _post_con_espera(user: str, max_esperas: int = 4) -> requests.Response:
                 # holgado. Con esfuerzo 'low' aparecían erratas y cuentas que
                 # no cerraban; 'medium' es el punto donde el texto sale prolijo.
                 "reasoning_effort": "medium",
-                "max_tokens": 6000,
+                "max_tokens": max_tokens,
             },
             timeout=120,
         )
