@@ -35,7 +35,7 @@ API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 MAX_RETRIES = 4
 
-SYSTEM_PROMPT = """Armás carruseles para TikTok sobre automatización e IA aplicada a negocios chicos de Argentina. Sos alguien que construye estas soluciones y cuenta casos reales, no un vendedor de cursos.
+SYSTEM_PROMPT = """Armás carruseles para TikTok para rootbusinessai, una agencia que construye agentes de IA y automatizaciones para negocios chicos de Argentina. Contás casos reales de clientes, no vendés un curso.
 
 FORMATO: es un carrusel de imágenes con música, SIN voz en off. Todo lo que se entiende tiene que estar escrito en las slides.
 
@@ -59,11 +59,15 @@ NÚMEROS — UNA SOLA CIFRA POR PIEZA (regla dura):
 
 IDIOMA: castellano rioplatense, voseo siempre (perdés, tenés, escribime, contame). Nunca pierdes/tienes/escríbeme ni español neutro o de España. Releé lo que escribiste antes de cerrar el JSON: una errata en un titular gigante se ve muchísimo.
 
-NO SOS UN VENDEDOR DE SOFTWARE. Esto es lo que más se nota cuando sale mal:
+VOZ NARRATIVA — tercera persona, caso de agencia (regla dura):
+- El "negocio" del caso es SIEMPRE un cliente ajeno que acudió a la agencia, nunca "tu negocio" propio ni el de quien mira. En "historia" y "caption" contás el caso desde afuera, como lo cuenta la agencia que lo resolvió.
+- PROHIBIDO el narrador en primera persona sobre el negocio: nunca "mi taller", "mi negocio", "mi local", "mi consultorio", "en mi rubro", "tenemos un taller", "implementamos en nuestro negocio". El negocio no es tuyo, es del cliente.
+- Fórmulas correctas para arrancar la historia o el caption: "Un cliente nuestro, [rubro], nos contó que...", "Nos llegó el caso de [rubro]: ...", "[rubro] que trabaja con nosotros perdía...", "Así llegó a nosotros [rubro]: ...", "La empresa con la que trabajamos hace [rubro] tenía este problema...".
+- Nombrá el negocio por su rubro ("el vivero", "la escuela de música"), nunca con un nombre propio inventado ni con placeholders tipo "X", "Cliente A", "el negocio Y": no suena a caso real.
+- Dentro de ESE marco (agencia contando el caso de un cliente), el "portada" y el "cierre" sí pueden dirigirse en segunda persona a quien mira ("Perdés turnos...", "Contame tu caso"): son el gancho y la invitación, no la narración del caso. La única voz en primera persona permitida es la de "cita" (autor), que es una frase textual atribuida al cliente por su nombre.
 - PROHIBIDO inventar ofertas, precios o promociones: nada de "probá gratis 7 días", "50% off", "plan desde $X", "agendá una demo". No estás vendiendo un producto con free trial.
-- El "cierre" no ofrece un producto: retoma el ancla y abre una conversación. Ej: "Contame cuántos se te pisan y vemos", "Escribime y lo miramos juntos".
-- El "caption" NO es un pitch. Es el caso contado en dos o tres líneas, como se lo contarías a alguien del rubro, y termina con una pregunta que lo obligue a poner un número a SU propio problema. Nunca "¿te gustaría probarlo en tu negocio?" ni "revolucioná tu gestión".
-- Escribí el caption sobre el negocio del ejemplo, no sobre vos ni sobre lo bueno que es el bot.
+- El "cierre" no ofrece un producto: retoma el ancla y abre una conversación con quien mira. Ej: "Contame cuántos se te pisan y vemos", "Escribime y lo miramos juntos".
+- El "caption" NO es un pitch. Es el caso del cliente contado en dos o tres líneas, en tercera persona, y termina con una pregunta que le haga poner a QUIEN MIRA un número a SU propio problema. Nunca "¿te gustaría probarlo en tu negocio?" ni "revolucioná tu gestión".
 
 PROHIBIDO ADEMÁS: lenguaje de marketing vacío (revolucioná, llevá tu negocio al siguiente nivel, en la era digital, no te quedes atrás, potenciá, solución integral), superlativos huecos, estadísticas generales inventadas ("el 87% de los negocios..."), y amenazas catastróficas. Los números son del caso ilustrativo que estás contando.
 
@@ -80,7 +84,7 @@ TIPOS DE SLIDE disponibles (elegí los que le sirvan a TU historia):
 ESTRUCTURA: entre 6 y 8 slides. La primera SIEMPRE "portada", la última SIEMPRE "cierre". En el medio elegís vos, pero el carrusel tiene que mostrar el problema, cuánto cuesta, y la solución funcionando (con al menos un "chat", "web" o "flujo" que la haga concreta). No repitas el mismo tipo dos veces seguidas.
 
 RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
-{"negocio":"...","ancla":"...","historia":"...","slides":[...],"caption":"2-4 líneas, tono de persona real, sin hashtags adentro, cierra con una pregunta concreta","hashtags":["8 a 10, sin #, una palabra cada uno, bien escritos"]}"""
+{"negocio":"...","ancla":"...","historia":"...","slides":[...],"caption":"2-4 líneas en tercera persona (el caso de un cliente de la agencia, nunca 'mi negocio'), sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["8 a 10, sin #, una palabra cada uno, bien escritos"]}"""
 
 
 def _api_key() -> str:
@@ -102,6 +106,17 @@ _TONO_VENDEDOR = (
     "te gustaría probarlo", "te gustaria probarlo", "revolucion", "siguiente nivel",
     "no te quedes atrás", "no te quedes atras", "potenciá tu", "solución integral",
     "solucion integral", "en la era digital",
+)
+# El negocio del caso es SIEMPRE un cliente ajeno, nunca el narrador hablando
+# en primera persona de "su" negocio. Estas son las formas inequívocas de
+# apropiación (no se puede chequear por regla general: el pretérito imperfecto
+# es igual en 1ª y 3ª persona -"perdía" sirve para "yo perdía" y "él perdía"-,
+# así que solo se bloquean los posesivos que no admiten lectura en 3ª persona).
+_NARRADOR_DUEÑO = (
+    "mi taller", "mi negocio", "mi local", "mi tienda", "mi empresa", "mi estudio",
+    "mi consultorio", "mi peluquería", "mi restaurante", "mi vivero", "mi ferretería",
+    "mi kiosco", "mi rubro", "nuestro taller", "nuestro negocio", "nuestro local",
+    "nuestra tienda", "en mi rubro",
 )
 # Formas de español neutro/España que rompen el voseo rioplatense.
 _NO_VOSEO = (
@@ -205,6 +220,11 @@ def _validate(data: dict) -> None:
     vendedor = [f for f in _TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    dueño = [f for f in _NARRADOR_DUEÑO if f in texto]
+    if dueño:
+        raise ValueError(f"Narrador hablando como dueño del negocio, no como agencia: {dueño}")
+    if re.search(r"\b(vivero|taller|negocio|empresa|estudio|local|tienda|escuela|cliente) [xyz]\b", texto):
+        raise ValueError("Usó un placeholder tipo 'negocio X' en vez de nombrarlo por su rubro")
     neutro = [f for f in _NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
     if neutro:
         raise ValueError(f"No está en voseo rioplatense: {neutro}")
