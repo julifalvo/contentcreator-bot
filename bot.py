@@ -4,12 +4,11 @@ aprobaciones — ahora también entiende comandos.
 
 Dejalo corriendo (python bot.py) y desde el chat de Telegram mandale:
 
-    /generar                                pieza al azar, modo ollama (IA local, gratis)
-    /generar automatizacion                 pilar puntual
-    /generar automatizacion ia              pilar + modo (ollama / ia)
-    /generar automatizacion ollama siempre  + fuerza foto real en los mockups (auto/siempre/nunca)
-    /pilares                                lista los pilares disponibles
-    /ayuda                                  este mensaje
+    /generar                 carrusel de un pilar al azar
+    /generar automatizacion  carrusel de un pilar puntual
+    /publicar                manda a aprobar la última pieza, sin regenerar
+    /pilares                 lista los pilares disponibles
+    /ayuda                   este mensaje
 
 Solo responde al chat configurado en TELEGRAM_CHAT_ID; cualquier otro chat se
 ignora (por si alguien más le escribe al bot).
@@ -36,18 +35,13 @@ import telegram_client
 import tiktok_client
 from config import PILLARS
 from generate import build_piece
-from image_gen import set_photo_bg_chance
 
 ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-MODOS_VALIDOS = ("ollama", "ia")
-FONDOS_VALIDOS = {"auto": 0.5, "siempre": 1.0, "nunca": 0.0}
 
 HELP_TEXT = (
     "Comandos:\n"
-    "/generar [pilar] [modo] [fondos] - genera una pieza y la manda a aprobar\n"
+    "/generar [pilar] - genera un carrusel y lo manda a aprobar\n"
     f"  pilar: {', '.join(list(PILLARS.keys()) + ['random'])} (default: random)\n"
-    f"  modo: {', '.join(MODOS_VALIDOS)} (default: ollama, la IA decide todo el contenido)\n"
-    f"  fondos: {', '.join(FONDOS_VALIDOS)} (default: auto) - foto real (gratis) en mockups de bot/agente\n"
     "/publicar - manda a aprobar la última pieza que quedó en output/ (sin regenerar)\n"
     "/pilares - lista los pilares\n"
     "/ayuda - este mensaje"
@@ -66,25 +60,16 @@ def _handle_generar(args: list[str]) -> None:
         return
 
     pillar_key = args[0] if len(args) >= 1 else "random"
-    modo = args[1] if len(args) >= 2 else "ollama"
-    fondos = args[2] if len(args) >= 3 else "auto"
 
     if pillar_key == "random":
         pillar_key = random.choice(list(PILLARS.keys()))
     if pillar_key not in PILLARS:
         telegram_client.send_message(f"Pilar inválido: '{pillar_key}'. Usá /pilares para ver las opciones.")
         return
-    if modo not in MODOS_VALIDOS:
-        telegram_client.send_message(f"Modo inválido: '{modo}'. Usá: {', '.join(MODOS_VALIDOS)}.")
-        return
-    if fondos not in FONDOS_VALIDOS:
-        telegram_client.send_message(f"Fondos inválido: '{fondos}'. Usá: {', '.join(FONDOS_VALIDOS)}.")
-        return
 
-    set_photo_bg_chance(FONDOS_VALIDOS[fondos])
-    telegram_client.send_message(f"Generando ({PILLARS[pillar_key]['label']}, modo {modo}, fondos {fondos})...")
+    telegram_client.send_message(f"Generando carrusel ({PILLARS[pillar_key]['label']})...")
     try:
-        folder = build_piece(pillar_key, modo)
+        folder = build_piece(pillar_key)
     except Exception as e:
         telegram_client.send_message(f"Falló la generación: {e}")
         return
@@ -105,7 +90,7 @@ def _enviar_a_aprobar(folder) -> None:
         "message_id": message_id,
         "folder": folder,
         "images": images,
-        "title": content["portada_text"],
+        "title": content["slides"][0]["titular"],
         "caption": caption,
     }
 
