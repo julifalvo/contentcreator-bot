@@ -57,7 +57,11 @@ def publish_images(image_paths: list[Path]) -> list[str]:
     for i, path in enumerate(image_paths):
         img = Image.open(path).convert("RGB")
         name = f"slide-{i + 1:02d}.jpg"
-        img.save(CONTENT_DIR / name, "JPEG", quality=92)
+        # calidad máxima y sin subsampling de croma: nuestras imágenes son
+        # texto nítido sobre colores planos, no fotos — el subsampling 4:2:0
+        # por default de JPEG le mete "ringing" a los bordes del texto y a
+        # simple vista se ve borroso/con artefactos de color.
+        img.save(CONTENT_DIR / name, "JPEG", quality=100, subsampling=0)
         urls.append(f"{PUBLIC_BASE_URL}/{name}")
 
     _run_git("add", "content")
