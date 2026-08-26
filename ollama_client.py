@@ -76,6 +76,12 @@ SYSTEM_PROMPT = (
     "responder se fue a la competencia', 'Cada noche regalás 40 minutos gratis'.\n"
     "- Escribí en segunda persona ('perdés', 'estás', 'tu negocio'), hablándole directo a quien "
     "mira, no en tercera persona sobre un caso ajeno.\n"
+    "- Variá el registro entre pieza y pieza, no repitas siempre la misma fórmula. A veces "
+    "'portada_text' puede ser más informal y directo, tipo posteo de una persona real "
+    "frustrada (ej: 'Es una locura perder ventas por tardar horas en responder', 'Posta ya "
+    "cansa perder clientes así', '¿Por qué seguís perdiendo plata por esto?'). Otras veces más "
+    "seco y numérico (ej: 'Perdés 3 clientes por semana sin enterarte'). Elegí el que mejor "
+    "encaje con el caso, no fuerces el mismo molde siempre.\n"
     "- La primera slide después de la portada tiene que hacer que la persona se reconozca en el "
     "problema: describí la escena concreta que vive, no el concepto abstracto.\n"
     "- El 'caption' cierra con una pregunta incómoda pero honesta, que obligue a la persona a "
@@ -241,7 +247,7 @@ def _chat_json(system: str, user: str, validate) -> dict:
                 "stream": False,
                 "options": {"temperature": 0.9},
             },
-            timeout=300,
+            timeout=600,
         )
         resp.raise_for_status()
         raw = resp.json()["message"]["content"]

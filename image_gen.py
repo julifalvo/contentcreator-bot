@@ -452,7 +452,7 @@ def _draw_accent(draw: ImageDraw.ImageDraw, x: int, y: int) -> None:
         draw.rectangle([x, y, x + 140, y + 10], fill=color)
 
 
-COVER_LAYOUTS = ("centrado", "izquierda", "bloque")
+COVER_LAYOUTS = ("centrado", "izquierda", "bloque", "foto")
 
 
 def render_cover(
@@ -460,12 +460,55 @@ def render_cover(
     layout: str = "centrado", swipe_hint: str = "TOCA PARA VER COMO",
 ) -> None:
     """Portada del carrusel. `layout` cambia la composición del gancho."""
-    img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
-    draw = ImageDraw.Draw(img)
     w, h = CANVAS_SIZE
     margin = 90
     hook = _clean(portada_text).upper()
     swipe_hint = _clean(swipe_hint).upper()
+
+    if layout == "foto":
+        # Estilo "photo dump" de TikTok: foto real de fondo (café, escritorio,
+        # apuntes) con el gancho apilado en grande directo encima, sin tarjeta
+        # ni degradé — como el ejemplo que mandaste.
+        photo = pollinations_client.fetch_background("ambiente", w, h)
+        if photo is None:
+            img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
+        else:
+            if photo.size != (w, h):
+                photo = photo.resize((w, h))
+            img = photo.convert("RGB")
+        draw = ImageDraw.Draw(img)
+
+        # Velo oscuro más fuerte en el tercio central/inferior, donde va el texto.
+        veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        vdraw = ImageDraw.Draw(veil)
+        for y in range(h):
+            t = max(0.0, (y - h * 0.28) / (h * 0.72))
+            alpha = int(190 * min(1.0, t))
+            vdraw.line([(0, y), (w, y)], fill=(10, 10, 14, alpha))
+        img = Image.alpha_composite(img.convert("RGBA"), veil).convert("RGB")
+        draw = ImageDraw.Draw(img)
+
+        _draw_badge(draw, f"• {pillar_label.upper()}", margin, 90)
+
+        max_w = w - margin * 2
+        font = _fit_font(draw, hook, "black", 96, max_w)
+        title_h = _text_block_height(draw, hook, font, max_w, 1.1)
+        title_top = h - title_h - 320
+        _draw_multiline_left(
+            draw, hook, font, margin, title_top, max_w,
+            fill=(250, 248, 240), line_spacing=1.1,
+        )
+        sub_font = _font("bold", 38)
+        _draw_multiline_left(
+            draw, swipe_hint, sub_font, margin, title_top + title_h + 50, max_w,
+            fill=(250, 248, 240),
+        )
+        _draw_footer(draw)
+        img.save(out_path, "PNG")
+        return
+
+    img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
+    draw = ImageDraw.Draw(img)
 
     if layout == "izquierda":
         _draw_badge(draw, f"• {pillar_label.upper()}", margin, 90)
