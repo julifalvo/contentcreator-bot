@@ -76,14 +76,16 @@ body {{
   -webkit-font-smoothing:antialiased;
   position:relative;
 }}
-/* Textura de papel: ruido SVG a muy baja opacidad. Le saca el look
-   "vectorial plano" sin ensuciar el texto. */
+/* Textura de papel: antes era ruido SVG (feTurbulence) a baja opacidad, pero
+   son píxeles verdaderamente aleatorios y el PNG no los puede comprimir casi
+   nada (1.7MB por slide en vez de ~40KB, y eso tiraba abajo el envío a
+   Telegram por timeout). Esta textura repite un tile PEQUEÑO y cacheable:
+   sigue rompiendo el look "vectorial plano" sin ensuciar la compresión. */
 body::before {{
-  content:''; position:absolute; inset:0; pointer-events:none; opacity:.055;
-  background-image:url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'>\
-<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4'/>\
-</filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:.05;
+  background-image:
+    radial-gradient(circle at 1px 1px, {p['ink']} 1px, transparent 0);
+  background-size:5px 5px;
 }}
 .page {{
   position:absolute; inset:0; padding:118px 100px 96px;

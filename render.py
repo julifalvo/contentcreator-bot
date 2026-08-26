@@ -15,6 +15,8 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
+from PIL import Image
+
 CANVAS_W, CANVAS_H = 1080, 1920
 FONTS_DIR = Path(__file__).parent / "assets" / "fonts"
 
@@ -92,4 +94,17 @@ def html_to_png(html: str, out_path: Path) -> Path:
 
     if not out_path.exists():
         raise RuntimeError(f"Chrome no generó la imagen:\n{result.stderr[-800:]}")
+
+    _recomprimir(out_path)
     return out_path
+
+
+def _recomprimir(path: Path) -> None:
+    """Chrome guarda el screenshot como PNG sin optimizar: ~1.7MB por slide,
+    contra los ~50-90KB que salían dibujando con Pillow. Con 6-8 slides eso
+    tira abajo el envío del carrusel a Telegram por timeout. Estas piezas son
+    texto + colores planos + degradés suaves (nunca fotos con ruido real), así
+    que una paleta de 256 colores no se nota y pesa una fracción."""
+    img = Image.open(path).convert("RGB")
+    img = img.quantize(colors=256, method=Image.MEDIANCUT, dither=Image.FLOYDSTEINBERG)
+    img.save(path, "PNG", optimize=True)

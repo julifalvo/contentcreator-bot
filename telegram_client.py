@@ -39,7 +39,11 @@ def _chat_id() -> str:
 
 def _call(method: str, **kwargs) -> dict:
     url = API_BASE.format(token=_token(), method=method)
-    resp = requests.post(url, timeout=30, **kwargs)
+    # sendMediaGroup sube varias imágenes en un solo POST multipart; con una
+    # conexión de subida lenta, 30s no siempre alcanza y corta a mitad de
+    # envío. 120s da margen real sin bloquear el resto del bot (no hay nada
+    # más corriendo en paralelo mientras se manda la vista previa).
+    resp = requests.post(url, timeout=120, **kwargs)
     resp.raise_for_status()
     data = resp.json()
     if not data.get("ok"):
