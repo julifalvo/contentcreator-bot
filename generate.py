@@ -27,7 +27,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 import design
 import render
-from config import PILLARS
+from config import PILLARS, RUBROS
 from groq_client import generate_carousel
 
 OUTPUT_DIR = Path(__file__).parent / "output"
@@ -40,10 +40,12 @@ def slugify(text: str) -> str:
 def build_piece(pillar_key: str) -> Path:
     pillar = PILLARS[pillar_key]
     angulo = random.choice(pillar["angle"])
+    rubro = random.choice(RUBROS)
     palette = design.pick_palette()
 
     print(f"→ {pillar['label']} — {angulo}")
-    data = generate_carousel(pillar["label"], angulo)
+    print(f"  Rubro: {rubro}")
+    data = generate_carousel(pillar["label"], angulo, rubro)
     print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
 
     slides = data["slides"]

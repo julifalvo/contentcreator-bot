@@ -7,6 +7,23 @@ El resto de la configuración visual (paletas, tipografías, layout) vive ahora
 en design.py, que arma el HTML editorial de cada slide.
 """
 
+# Rubros que se sortean como semilla. Sin esto el modelo cae siempre en los
+# mismos dos o tres ("taller de reparación" salía en 3 de cada 4 piezas): son
+# los ejemplos más frecuentes en sus datos de entrenamiento. La IA sigue
+# inventando el caso, el número y la historia; esto solo empuja el escenario.
+RUBROS = [
+    "una panadería de barrio", "una veterinaria", "un estudio contable",
+    "una peluquería", "un gimnasio de barrio", "una óptica",
+    "un vivero", "una ferretería", "un consultorio odontológico",
+    "una escuela de música", "un local de indumentaria", "una cafetería de especialidad",
+    "una inmobiliaria chica", "un centro de estética", "una juguetería",
+    "un taller mecánico", "una guardería de mascotas", "un estudio de tatuajes",
+    "una casa de repuestos", "un instituto de idiomas", "una florería",
+    "un lavadero de autos", "una pinturería", "un estudio de fotografía",
+    "una rotisería", "un kinesiólogo", "una mueblería",
+    "un club de padel", "una librería", "un corralón de materiales",
+]
+
 PILLARS = {
     "automatizacion": {
         "label": "Automatización",
