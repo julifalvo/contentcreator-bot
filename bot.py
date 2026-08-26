@@ -21,6 +21,7 @@ import random
 import sys
 import time
 import traceback
+from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
@@ -47,6 +48,7 @@ HELP_TEXT = (
     f"  pilar: {', '.join(list(PILLARS.keys()) + ['random'])} (default: random)\n"
     f"  modo: {', '.join(MODOS_VALIDOS)} (default: ollama, la IA decide todo el contenido)\n"
     f"  fondos: {', '.join(FONDOS_VALIDOS)} (default: auto) - foto real (gratis) en mockups de bot/agente\n"
+    "/publicar - manda a aprobar la última pieza que quedó en output/ (sin regenerar)\n"
     "/pilares - lista los pilares\n"
     "/ayuda - este mensaje"
 )
@@ -87,6 +89,12 @@ def _handle_generar(args: list[str]) -> None:
         telegram_client.send_message(f"Falló la generación: {e}")
         return
 
+    _enviar_a_aprobar(folder)
+
+
+def _enviar_a_aprobar(folder) -> None:
+    """Manda la vista previa de `folder` y la deja pendiente de aprobación."""
+    global _pending
     content = json.loads((folder / "contenido.json").read_text(encoding="utf-8"))
     hashtags = " ".join(f"#{h.lstrip('#')}" for h in content.get("hashtags", []))
     caption = f"{content['caption']}\n\n{hashtags}".strip()
@@ -100,6 +108,26 @@ def _handle_generar(args: list[str]) -> None:
         "title": content["portada_text"],
         "caption": caption,
     }
+
+
+def _handle_publicar() -> None:
+    """Manda a aprobar la última pieza ya generada, sin volver a generarla."""
+    if _pending is not None:
+        telegram_client.send_message(
+            "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala primero."
+        )
+        return
+
+    output_dir = Path(__file__).parent / "output"
+    carpetas = sorted((p for p in output_dir.iterdir() if p.is_dir() and (p / "contenido.json").exists()),
+                      key=lambda p: p.name) if output_dir.exists() else []
+    if not carpetas:
+        telegram_client.send_message("No hay ninguna pieza generada en output/. Usá /generar primero.")
+        return
+
+    folder = carpetas[-1]
+    telegram_client.send_message(f"Mandando a aprobar: {folder.name}")
+    _enviar_a_aprobar(folder)
 
 
 def _handle_callback(cq: dict) -> None:
@@ -141,7 +169,9 @@ def _handle_callback(cq: dict) -> None:
 
 def _handle_message(message: dict) -> None:
     text = message.get("text", "").strip()
-    if text.startswith("/generar"):
+    if text.startswith("/publicar"):
+        _handle_publicar()
+    elif text.startswith("/generar"):
         _handle_generar(text.split()[1:])
     elif text.startswith("/pilares"):
         listado = "\n".join(f"- {k}: {p['label']}" for k, p in PILLARS.items())

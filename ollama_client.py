@@ -106,8 +106,17 @@ SYSTEM_PROMPT = (
     '  "swipe_hint": "string en MAYÚSCULAS, máx 5 palabras, invita a seguir mirando el carrusel (ej: \'MIRÁ LO QUE PASÓ\'). Sin flechas ni emojis",\n'
     '  "demo_caption": "string en MAYÚSCULAS, máx 7 palabras, el remate que va debajo del chat del demo (ej: \'CONTESTÓ ANTES QUE VOS\')",\n'
     '  "caption": "string, 2-4 líneas, termina con una pregunta concreta",\n'
-    '  "hashtags": ["8 a 10 strings sin el símbolo #, sin espacios, palabras completas y bien escritas (nunca cortadas tipo tiemposdigi)"]\n'
+    '  "hashtags": ["8 a 10 strings, ver la lista permitida más abajo"]\n'
     "}\n\n"
+    "HASHTAGS — elegí 7 u 8 EXACTAMENTE de esta lista (copiadas tal cual, sin "
+    "modificar ni inventar variantes):\n"
+    "automatizacion, iaparanegocios, chatbots, agentesdeia, emprendimiento, "
+    "negociosdigitales, productividad, pymes, emprendedores, whatsappbusiness, "
+    "atencionalcliente, ventas, inteligenciaartificial, transformaciondigital, "
+    "negocios, comerciodebarrio, eficiencia, agendaonline\n"
+    "Y agregá 1 o 2 más del rubro concreto (ej: 'veterinaria', 'peluqueria', "
+    "'gimnasio'): una sola palabra, sin tildes, sin espacios, bien escrita y "
+    "completa. Nunca inventes palabras cortadas ni pegoteos raros.\n\n"
     "Ejemplo del NIVEL de detalle y tono que se espera (no copies el rubro, "
     "inventá uno distinto, pero imitá exactamente este estilo de oraciones "
     "completas y específicas):\n"

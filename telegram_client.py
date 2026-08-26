@@ -123,7 +123,7 @@ def clear_keyboard(message_id: int) -> None:
     )
 
 
-def wait_for_approval(message_id: int, timeout_sec: int = 900) -> bool:
+def wait_for_approval(message_id: int, timeout_sec: int = 7200) -> bool:
     """Long polling sobre getUpdates hasta que llegue un click en `message_id`."""
     token = _token()
     offset = None
@@ -134,9 +134,16 @@ def wait_for_approval(message_id: int, timeout_sec: int = 900) -> bool:
         params = {"timeout": 25}
         if offset is not None:
             params["offset"] = offset
-        resp = requests.get(API_BASE.format(token=token, method="getUpdates"), params=params, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
+        # Un corte de red pasajero no puede tirar abajo toda la espera: se
+        # reintenta hasta que venza el plazo.
+        try:
+            resp = requests.get(API_BASE.format(token=token, method="getUpdates"), params=params, timeout=40)
+            resp.raise_for_status()
+            data = resp.json()
+        except requests.exceptions.RequestException as e:
+            print(f"  (problema de red con Telegram: {e}; reintento en 5s)")
+            time.sleep(5)
+            continue
         for update in data.get("result", []):
             offset = update["update_id"] + 1
             cq = update.get("callback_query")
