@@ -88,9 +88,12 @@ body::before {{
   background-size:5px 5px;
 }}
 .page {{
-  position:absolute; inset:0; padding:118px 100px 96px;
+  position:absolute; inset:0; padding:170px 100px 270px;
   display:flex; flex-direction:column;
 }}
+/* Zona segura de TikTok: la UI propia de la app (usuario, caption, botones de
+   like/comentario, música) tapa ~150px arriba y ~250px abajo del posteo. El
+   @handle y el folio quedan dentro de esa franja tapada si no se los sube. */
 /* El contenido se centra verticalmente y ocupa el alto disponible entre el
    encabezado y el pie. Si se deja arriba con un spacer abajo, queda medio
    lienzo vacío y la pieza se ve incompleta. */
