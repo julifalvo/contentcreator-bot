@@ -35,8 +35,9 @@ SYSTEM_PROMPT = (
     "- Prohibido el lenguaje de marketing vacío: 'revolucioná tu negocio', 'llevá tu negocio "
     "al siguiente nivel', 'en la era digital', 'maximizá resultados', 'no te quedes atrás', "
     "'la clave del éxito', o cualquier frase que sonaría igual en cualquier rubro.\n"
-    "- Cada pieza tiene que incluir un DEMO real y específico: un intercambio concreto de "
-    "mensajes (cliente escribe algo puntual, el agente responde algo puntual), con un rubro "
+    "- Cada pieza tiene que incluir un DEMO real y específico: un intercambio concreto (el "
+    "cliente hace algo puntual o pasa un evento puntual, y quien corresponda según el TIPO DE "
+    "SOLUCIÓN indicado -el agente, la web, o el sistema- responde algo puntual), con un rubro "
     "de negocio específico y DISTINTO cada vez (variá el rubro: no repitas 'vivero' ni "
     "'consultorio odontológico' si ya los usaste antes) — no 'un negocio' genérico.\n"
     "- Usá números y detalles concretos siempre que se pueda (tiempos, cantidad de mensajes, "
@@ -57,10 +58,10 @@ SYSTEM_PROMPT = (
     "eso le cuesta, (3) qué cambia con el agente, (4) el resultado con el mismo número del "
     "principio. Cada slide tiene que continuar la anterior, no ser una frase suelta.\n"
     "- El demo tiene que ser el MISMO caso del que venís hablando: si el problema es que "
-    "responde tarde, el demo muestra al agente respondiendo al instante ese tipo de consulta. "
-    "La respuesta del agente resuelve algo concreto, no inventa excusas ni cambia de tema.\n"
+    "responde tarde, el demo muestra la respuesta llegando al instante para ese tipo de consulta. "
+    "La respuesta resuelve algo concreto, no inventa excusas ni cambia de tema.\n"
     "- 'tiempo_respuesta' tiene que ser inmediato y creíble: segundos, 'al instante', 'en el "
-    "momento'. Nunca minutos ni horas — el punto del agente es justamente que no hace esperar.\n"
+    "momento'. Nunca minutos ni horas — el punto de la solución es justamente que no hace esperar.\n"
     "- Cada frase tiene que agregar información. Nada de muletillas vacías pegadas al final "
     "('sin borrar nada', 'y listo', 'sin problemas') que no significan nada concreto.\n\n"
     "IDIOMA — español rioplatense (Argentina):\n"
@@ -123,9 +124,10 @@ SYSTEM_PROMPT = (
     "Y agregá 1 o 2 más del rubro concreto (ej: 'veterinaria', 'peluqueria', "
     "'gimnasio'): una sola palabra, sin tildes, sin espacios, bien escrita y "
     "completa. Nunca inventes palabras cortadas ni pegoteos raros.\n\n"
-    "Ejemplo del NIVEL de detalle y tono que se espera (no copies el rubro, "
-    "inventá uno distinto, pero imitá exactamente este estilo de oraciones "
-    "completas y específicas):\n"
+    "Ejemplo del NIVEL de detalle y tono que se espera (no copies el rubro ni el tipo de "
+    "solución del ejemplo -acá es un chatbot, pero el pedido real puede ser sobre una web o una "
+    "automatización interna, seguí el TIPO DE SOLUCIÓN que te indiquen-, imitá exactamente este "
+    "estilo de oraciones completas y específicas):\n"
     "{\n"
     '  "negocio_ejemplo": "un consultorio de kinesiología",\n'
     '  "demo": {"canal": "WhatsApp", '
@@ -271,15 +273,16 @@ def _chat_json(system: str, user: str, validate) -> dict:
     )
 
 
-def generate_content(pillar_label: str, angle: str) -> dict:
+def generate_content(pillar_label: str, angle: str, tipo_instruccion: str) -> dict:
     """Pide al modelo local (vía Ollama) un paquete completo de contenido. Costo: $0."""
     user_prompt = (
         f"Pilar de contenido: {pillar_label}.\n"
         f"Ángulo del video: {angle}\n\n"
+        f"TIPO DE SOLUCIÓN de esta pieza: {tipo_instruccion}\n\n"
         "Elegí un rubro de negocio concreto y específico (uno distinto cada vez, no siempre el "
-        "mismo) y armá el contenido para un video sin voz en off, contado a través de ese rubro "
-        "y de un demo real de conversación cliente-agente. Nada de lenguaje de marketing "
-        "genérico. Respondé solo con el JSON pedido, sin texto extra."
+        "mismo) y armá el contenido para un video sin voz en off, contado a través de ese rubro y "
+        "del tipo de solución indicado arriba. Nada de lenguaje de marketing genérico. Respondé "
+        "solo con el JSON pedido, sin texto extra."
     )
     return _chat_json(SYSTEM_PROMPT, user_prompt, _validate)
 

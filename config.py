@@ -146,6 +146,56 @@ PALETTES = [
     },
 ]
 
+# Tipo de solución que protagoniza cada pieza. Antes TODA pieza mostraba
+# siempre un chat "agente de IA responde por WhatsApp" (quedó hardcodeado en
+# el header del demo en image_gen.py), aunque el ángulo hablara de una web o
+# de una automatización interna sin cliente de por medio. Ahora se sortea un
+# tipo por pieza (ver generate.py) y se lo pasa a la IA para que la historia
+# completa (portada, slides, demo, caption) se cuente en esos términos, y al
+# mockup para que la imagen de solución coincida con lo que se está contando.
+SOLUTION_TYPES = {
+    "chatbot": {
+        "label": "Chatbot conversacional",
+        "trigger_label": "CLIENTE",
+        "responder_label": "AGENTE DE IA",
+        "mockup_kind": "agente",
+        "instruccion": (
+            "Esta pieza es sobre un CHATBOT/agente conversacional que responde directo al cliente "
+            "por chat (WhatsApp, Instagram DM). El 'demo' es un intercambio real: el cliente escribe "
+            "algo puntual, el agente responde. Podés hablar de 'el agente' o 'el chatbot' con naturalidad."
+        ),
+    },
+    "web": {
+        "label": "Página o sistema web",
+        "trigger_label": "CLIENTE",
+        "responder_label": "TU WEB",
+        "mockup_kind": "web",
+        "instruccion": (
+            "Esta pieza es sobre una PÁGINA WEB o sistema propio (turnos, pedidos, reservas) que "
+            "resuelve todo solo, SIN que haya chat de por medio. En 'demo', 'mensaje_cliente' es la "
+            "acción que hace el cliente en la web (ej: 'Entra y elige el horario libre') y "
+            "'respuesta_bot' es lo que la web hace automáticamente en respuesta (ej: 'Confirma el "
+            "turno al instante, sin que nadie lo escriba'). PROHIBIDO decir 'agente de IA' o "
+            "'chatbot' en ningún campo: hablá de 'tu web', 'el sistema', 'la página'."
+        ),
+    },
+    "automatizacion": {
+        "label": "Automatización interna",
+        "trigger_label": "EVENTO",
+        "responder_label": "EL SISTEMA",
+        "mockup_kind": "bot",
+        "instruccion": (
+            "Esta pieza es sobre una AUTOMATIZACIÓN INTERNA que corre sola en el negocio, sin que "
+            "el cliente vea nada ni haya chat de por medio (ej: stock, altas, recordatorios, "
+            "cobros). En 'demo', 'mensaje_cliente' es el evento interno que dispara todo (ej: 'El "
+            "stock de un insumo baja de 5 unidades') y 'respuesta_bot' es lo que el sistema hace "
+            "solo en respuesta (ej: 'Genera el pedido de reposición, sin que nadie lo note'). "
+            "PROHIBIDO decir 'agente de IA' o 'chatbot' en ningún campo: hablá de 'la "
+            "automatización', 'el sistema'."
+        ),
+    },
+}
+
 BRAND = dict(PALETTES[0])
 
 # Tamaño de lienzo formato TikTok (9:16)

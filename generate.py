@@ -27,7 +27,7 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
-from config import FONT_SETS, NARRATIVE_TEMPLATES, PALETTES, PILLARS, STYLES
+from config import FONT_SETS, NARRATIVE_TEMPLATES, PALETTES, PILLARS, SOLUTION_TYPES, STYLES
 from image_gen import (
     COVER_LAYOUTS, SLIDE_LAYOUTS,
     render_cover, render_cta, render_demo, render_photo_slide, render_slide, render_solution_mockup,
@@ -49,17 +49,19 @@ def build_piece(pillar_key: str, modo: str) -> Path:
     set_style(random.choice(STYLES))
 
     angle = random.choice(pillar["angle"])
+    tipo_key = random.choice(list(SOLUTION_TYPES))
+    tipo = SOLUTION_TYPES[tipo_key]
 
     if modo == "ia":
         from ai_client import generate_content
 
-        print(f"→ Generando con IA (consume créditos) para: {pillar['label']} — {angle}")
-        content = generate_content(pillar["label"], angle)
+        print(f"→ Generando con IA (consume créditos) para: {pillar['label']} — {angle} [{tipo['label']}]")
+        content = generate_content(pillar["label"], angle, tipo["instruccion"])
     else:
         from ollama_client import generate_content
 
-        print(f"→ Generando con modelo local (Ollama, sin costo) para: {pillar['label']} — {angle}")
-        content = generate_content(pillar["label"], angle)
+        print(f"→ Generando con modelo local (Ollama, sin costo) para: {pillar['label']} — {angle} [{tipo['label']}]")
+        content = generate_content(pillar["label"], angle, tipo["instruccion"])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     slug = slugify(content["portada_text"])
@@ -86,7 +88,7 @@ def build_piece(pillar_key: str, modo: str) -> Path:
         mockups = []
     else:
         print(f"  Generando {mockups_needed} mockup(s) con IA...")
-        mockups = pick_mockups(content["negocio_ejemplo"], count=mockups_needed)
+        mockups = pick_mockups(content["negocio_ejemplo"], count=mockups_needed, priority_kind=tipo["mockup_kind"])
 
     # --- Gráficos + guion, recorriendo la plantilla narrativa elegida ---
     img_index = 0
@@ -128,11 +130,12 @@ def build_piece(pillar_key: str, modo: str) -> Path:
             render_demo(
                 demo["canal"], demo["mensaje_cliente"], demo["respuesta_bot"], demo["tiempo_respuesta"],
                 next_path("demo"), demo_caption=demo_caption,
+                responder_label=tipo["responder_label"], trigger_label=tipo["trigger_label"],
             )
             script_lines.append(
-                f'Slide {img_index} (demo, chat {demo["canal"]}):\n'
-                f'  Cliente: "{demo["mensaje_cliente"]}"\n'
-                f'  Agente: "{demo["respuesta_bot"]}"\n'
+                f'Slide {img_index} (demo, {tipo["label"]} — {demo["canal"]}):\n'
+                f'  {demo["mensaje_cliente"]!r}\n'
+                f'  {tipo["responder_label"]}: {demo["respuesta_bot"]!r}\n'
                 f'  ({demo["tiempo_respuesta"]})'
             )
 
@@ -153,6 +156,7 @@ def build_piece(pillar_key: str, modo: str) -> Path:
 
     script_body = "\n\n".join(script_lines)
     script_txt = f"""PILAR: {pillar['label']}
+TIPO DE SOLUCIÓN: {tipo['label']}
 NEGOCIO DE EJEMPLO: {content['negocio_ejemplo']}
 
 Este es un carrusel de imágenes con música de fondo, sin voz en off.
@@ -168,7 +172,9 @@ CAPTION PARA TIKTOK:
 HASHTAGS:
   {hashtag_line}
 """
-    content_with_mockup = {**content, "soluciones_visuales": mockups, "narrative_template": template}
+    content_with_mockup = {
+        **content, "soluciones_visuales": mockups, "narrative_template": template, "tipo_solucion": tipo_key,
+    }
     (folder / "contenido.txt").write_text(script_txt, encoding="utf-8")
     (folder / "contenido.json").write_text(
         json.dumps(content_with_mockup, ensure_ascii=False, indent=2), encoding="utf-8"

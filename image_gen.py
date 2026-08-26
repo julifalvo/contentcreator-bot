@@ -105,6 +105,26 @@ def _gradient_background(top: tuple, bottom: tuple) -> Image.Image:
     return img
 
 
+def _fit_photo_full(photo: Image.Image, w: int, h: int) -> Image.Image:
+    """Encaja la foto ENTERA en el lienzo, sin recortar nada de la imagen
+    (antes se hacía photo.resize((w, h)), que la estiraba/deformaba y podía
+    dejar la composición real -cara, manos- fuera de cuadro). El sobrante de
+    lienzo que la foto no llena se rellena con la misma foto ampliada y
+    difuminada de fondo, para que no queden franjas vacías."""
+    photo = photo.convert("RGB")
+
+    bg_scale = max(w / photo.width, h / photo.height)
+    bg = photo.resize((round(photo.width * bg_scale), round(photo.height * bg_scale)), Image.LANCZOS)
+    bg = bg.crop(((bg.width - w) // 2, (bg.height - h) // 2, (bg.width - w) // 2 + w, (bg.height - h) // 2 + h))
+    bg = bg.filter(ImageFilter.GaussianBlur(45))
+    bg = Image.eval(bg, lambda x: int(x * 0.55))
+
+    fg_scale = min(w / photo.width, h / photo.height)
+    fg = photo.resize((round(photo.width * fg_scale), round(photo.height * fg_scale)), Image.LANCZOS)
+    bg.paste(fg, ((w - fg.width) // 2, (h - fg.height) // 2))
+    return bg
+
+
 def _mockup_background(kind: str) -> tuple[Image.Image, bool]:
     """Fondo para un mockup: a veces una foto real gratis (Pollinations.ai,
     sin texto, con un velo oscuro encima para que el contenido dibujado arriba
@@ -114,8 +134,7 @@ def _mockup_background(kind: str) -> tuple[Image.Image, bool]:
     if random.random() < PHOTO_BG_CHANCE:
         photo = pollinations_client.fetch_background(kind, w, h)
         if photo is not None:
-            if photo.size != (w, h):
-                photo = photo.resize((w, h))
+            photo = _fit_photo_full(photo, w, h)
             veil = Image.new("RGBA", (w, h), BRAND["bg_top"] + (150,))
             return Image.alpha_composite(photo.convert("RGBA"), veil).convert("RGB"), True
     return _gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]), False
@@ -129,9 +148,7 @@ def render_photo_slide(out_path: Path) -> None:
     w, h = CANVAS_SIZE
     photo = pollinations_client.fetch_background("ambiente", w, h)
     if photo is not None:
-        if photo.size != (w, h):
-            photo = photo.resize((w, h))
-        img = photo
+        img = _fit_photo_full(photo, w, h)
     else:
         img = _gradient_background(BRAND["bg_top"], BRAND["bg_bottom"])
 
@@ -371,17 +388,20 @@ def _draw_bubble(
 
 def render_demo(
     canal: str, mensaje_cliente: str, respuesta_bot: str, tiempo_respuesta: str, out_path: Path,
-    demo_caption: str = "ASI RESPONDE UN AGENTE DE IA",
+    demo_caption: str = "ASI RESPONDE EN SEGUNDOS",
+    responder_label: str = "AGENTE DE IA",
+    trigger_label: str = "CLIENTE",
 ) -> None:
-    """Slide de demo: simula un chat real cliente -> agente de IA. A veces el
-    fondo es una foto real (gratis, vía Pollinations.ai) con un velo CLARO
-    encima —no oscuro como en los otros mockups— para que siga leyéndose el
-    texto oscuro sobre fondo claro de esta slide en particular."""
+    """Slide de demo: simula un intercambio real cliente/evento -> quien
+    responde (un agente de chat, la web, o un sistema interno según la pieza:
+    ver responder_label). A veces el fondo es una foto real (gratis, vía
+    Pollinations.ai) con un velo CLARO encima —no oscuro como en los otros
+    mockups— para que siga leyéndose el texto oscuro sobre fondo claro de
+    esta slide en particular."""
     w, h = CANVAS_SIZE
     photo = pollinations_client.fetch_background("bot", w, h) if random.random() < PHOTO_BG_CHANCE else None
     if photo is not None:
-        if photo.size != (w, h):
-            photo = photo.resize((w, h))
+        photo = _fit_photo_full(photo, w, h)
         veil = Image.new("RGBA", (w, h), (240, 242, 247, 210))
         img = Image.alpha_composite(photo.convert("RGBA"), veil).convert("RGB")
     else:
@@ -392,7 +412,7 @@ def render_demo(
     header_h = 170
     draw.rectangle([0, 0, w, header_h], fill=(18, 20, 32))
     header_font = _font("bold", 42)
-    label = f"{_clean(canal).upper()} - AGENTE DE IA"
+    label = f"{_clean(canal).upper()} - {responder_label}"
     bbox = draw.textbbox((0, 0), label, font=header_font)
     label_w = bbox[2] - bbox[0]
     draw.ellipse([w // 2 - label_w // 2 - 46, header_h // 2 - 12, w // 2 - label_w // 2 - 22, header_h // 2 + 12], fill=(60, 220, 130))
@@ -401,14 +421,14 @@ def render_demo(
     tag_font = _font("bold", 28)
     body_font = _font("regular", 40)
 
-    draw.text((60, header_h + 60), "CLIENTE", font=tag_font, fill=(140, 144, 158))
+    draw.text((60, header_h + 60), trigger_label, font=tag_font, fill=(140, 144, 158))
     bubble_bottom = _draw_bubble(
         draw, _clean(mensaje_cliente), body_font, top_y=header_h + 105, align="left",
         max_bubble_width=800, fill=(255, 255, 255), text_fill=(25, 25, 35),
     )
 
-    tag_bbox = draw.textbbox((0, 0), "AGENTE DE IA", font=tag_font)
-    draw.text((w - 60 - (tag_bbox[2] - tag_bbox[0]), bubble_bottom + 55), "AGENTE DE IA", font=tag_font, fill=(60, 65, 85))
+    tag_bbox = draw.textbbox((0, 0), responder_label, font=tag_font)
+    draw.text((w - 60 - (tag_bbox[2] - tag_bbox[0]), bubble_bottom + 55), responder_label, font=tag_font, fill=(60, 65, 85))
     bot_bottom = _draw_bubble(
         draw, _clean(respuesta_bot), body_font, top_y=bubble_bottom + 95, align="right",
         max_bubble_width=820, fill=BRAND["accent"], text_fill=_contrast_text(BRAND["accent"]),
@@ -473,9 +493,7 @@ def render_cover(
         if photo is None:
             img = _apply_bg_pattern(_gradient_background(BRAND["bg_top"], BRAND["bg_bottom"]))
         else:
-            if photo.size != (w, h):
-                photo = photo.resize((w, h))
-            img = photo.convert("RGB")
+            img = _fit_photo_full(photo, w, h)
         draw = ImageDraw.Draw(img)
 
         # Velo oscuro más fuerte en el tercio central/inferior, donde va el texto.

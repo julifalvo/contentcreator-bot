@@ -26,8 +26,9 @@ SYSTEM_PROMPT = (
     "'no te quedes atrás', 'transformá tu negocio', 'la clave del éxito', 'potenciá', "
     "'optimizá tus procesos' (sin decir CUÁLES), o cualquier frase que sonaría igual en "
     "cualquier rubro. Si una frase serviría para vender cualquier cosa, está prohibida.\n"
-    "- Cada pieza tiene que incluir un DEMO real y específico: un intercambio concreto de "
-    "mensajes (cliente escribe algo puntual, el agente responde algo puntual), con un rubro "
+    "- Cada pieza tiene que incluir un DEMO real y específico: un intercambio concreto (el "
+    "cliente hace algo puntual o pasa un evento puntual, y quien corresponda según el TIPO DE "
+    "SOLUCIÓN indicado -el agente, la web, o el sistema- responde algo puntual), con un rubro "
     "de negocio específico (ej: un local de indumentaria, un consultorio odontológico, una "
     "inmobiliaria, un gimnasio) — no 'un negocio' genérico.\n"
     "- Usá números y detalles concretos siempre que se pueda (tiempos, cantidad de mensajes, "
@@ -71,7 +72,7 @@ OUTPUT_SCHEMA = {
                 },
                 "respuesta_bot": {
                     "type": "string",
-                    "description": "Respuesta concreta y específica del agente de IA a ese mensaje. Máx 22 palabras.",
+                    "description": "Respuesta concreta y específica (del agente, la web, o el sistema, según el tipo de solución) a ese mensaje. Máx 22 palabras.",
                 },
                 "tiempo_respuesta": {
                     "type": "string",
@@ -151,18 +152,19 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key)
 
 
-def generate_content(pillar_label: str, angle: str) -> dict:
+def generate_content(pillar_label: str, angle: str, tipo_instruccion: str) -> dict:
     """Pide a Claude un paquete completo de contenido para un TikTok (sin voz en off)."""
     client = _client()
 
     user_prompt = (
         f"Pilar de contenido: {pillar_label}.\n"
         f"Ángulo del video: {angle}\n\n"
+        f"TIPO DE SOLUCIÓN de esta pieza: {tipo_instruccion}\n\n"
         "Elegí un rubro de negocio concreto y específico (distinto cada vez que te lo pidan) "
         "y armá el contenido para un video sin voz en off (carrusel de imágenes + música de "
-        "fondo), contado a través de ese rubro y de un demo real de conversación cliente-agente. "
-        "Nada de lenguaje de marketing genérico: si al leerlo suena a anuncio, reescribilo como "
-        "lo dirías charlando con un amigo que tiene ese negocio."
+        "fondo), contado a través de ese rubro y del tipo de solución indicado arriba. Nada de "
+        "lenguaje de marketing genérico: si al leerlo suena a anuncio, reescribilo como lo "
+        "dirías charlando con un amigo que tiene ese negocio."
     )
 
     response = client.messages.create(
