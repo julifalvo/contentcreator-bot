@@ -50,16 +50,27 @@ SYSTEM_PROMPT = (
     "- 'caption' es SOLO el texto del posteo, sin hashtags adentro (los hashtags van aparte, en "
     "el campo 'hashtags').\n\n"
     "COHERENCIA (si esto falla, el video no sirve):\n"
+    "- Antes de escribir nada, elegí UN detalle ancla bien concreto (un producto puntual, un "
+    "horario, un tipo de mensaje, una situación) y hacé que TODO el video sea sobre ESE detalle: "
+    "la portada lo plantea, el problema lo describe con nombre y apellido (no en abstracto), el "
+    "costo se mide en ese mismo detalle, la solución lo resuelve a ÉL específicamente (no a un "
+    "problema distinto ni más general), el demo es un ejemplo real de ESE detalle pasando, y el "
+    "resultado cierra contando qué pasó con ESE MISMO detalle. Ej: si el ancla es 'se te llenó la "
+    "lista de espera de las 18hs', el demo tiene que ser justo alguien pidiendo ese horario, no "
+    "una consulta de precio ni un tema aparte.\n"
     "- La MISMA unidad de medida en toda la pieza. Si la portada dice 'por semana', los slides "
     "y el resultado hablan por semana. Nunca mezcles 'por semana' con 'por mes'.\n"
     "- Los números tienen que cerrar entre sí y con la aritmética. Si son 3 por semana, al año "
     "son ~156, no 270. Si no estás seguro de una cuenta, no la pongas.\n"
-    "- Las 4 slides son una sola historia encadenada: (1) la escena del problema, (2) lo que "
-    "eso le cuesta, (3) qué cambia con el agente, (4) el resultado con el mismo número del "
-    "principio. Cada slide tiene que continuar la anterior, no ser una frase suelta.\n"
-    "- El demo tiene que ser el MISMO caso del que venís hablando: si el problema es que "
-    "responde tarde, el demo muestra la respuesta llegando al instante para ese tipo de consulta. "
-    "La respuesta resuelve algo concreto, no inventa excusas ni cambia de tema.\n"
+    "- Las 4 slides son una sola historia encadenada, cada una construye sobre el detalle ancla "
+    "de la anterior (nunca una frase suelta ni un tema distinto): (1) la escena concreta del "
+    "problema con el detalle ancla, (2) lo que ESE detalle le cuesta en plata o clientes, (3) qué "
+    "cambia puntualmente con la solución para ese mismo detalle, (4) el resultado, con el mismo "
+    "número y el mismo detalle del principio.\n"
+    "- El demo tiene que ser el MISMO caso del que venís hablando, con el mismo detalle ancla: si "
+    "el problema es que responde tarde a una consulta de X, el demo muestra esa consulta de X "
+    "respondida al instante. La respuesta resuelve algo concreto, no inventa excusas ni cambia de "
+    "tema.\n"
     "- 'tiempo_respuesta' tiene que ser inmediato y creíble: segundos, 'al instante', 'en el "
     "momento'. Nunca minutos ni horas — el punto de la solución es justamente que no hace esperar.\n"
     "- Cada frase tiene que agregar información. Nada de muletillas vacías pegadas al final "
@@ -332,7 +343,7 @@ _MOCKUP_SPECS = {
 }
 
 
-def generate_mockup_content(negocio_ejemplo: str, kind: str) -> dict:
+def generate_mockup_content(negocio_ejemplo: str, kind: str, contexto: str = "") -> dict:
     """Genera el contenido (ficticio, ilustrativo) de un mockup de solución
     ('web', 'bot' o 'agente') con el modelo local. Costo: $0."""
     spec = _MOCKUP_SPECS[kind]
@@ -340,15 +351,19 @@ def generate_mockup_content(negocio_ejemplo: str, kind: str) -> dict:
     system = (
         "Generás el contenido de ejemplo (ficticio, ilustrativo) que se muestra dentro de un "
         f"mockup gráfico de tipo '{kind}' para un video de TikTok sobre automatización/IA para "
-        "negocios. Respondé ÚNICAMENTE con un objeto JSON válido (nada de texto ni markdown "
-        "antes o después), con EXACTAMENTE esta forma (todos los campos son obligatorios, "
-        "incluido \"caption\"):\n"
+        "negocios. Este mockup es UNA SLIDE MÁS del mismo video, no una pieza aparte: tiene que "
+        "ilustrar EXACTAMENTE el caso puntual que se viene contando (mismo problema, mismo "
+        "número si hay uno, misma solución), no un ejemplo genérico distinto del rubro. Respondé "
+        "ÚNICAMENTE con un objeto JSON válido (nada de texto ni markdown antes o después), con "
+        "EXACTAMENTE esta forma (todos los campos son obligatorios, incluido \"caption\"):\n"
         f"{spec['campos']}\n\n"
-        "Ejemplo de estilo (no copies el contenido, inventá otro específico para el rubro indicado, "
+        "Ejemplo de estilo (no copies el contenido, inventá otro específico para el caso indicado, "
         "pero incluí SIEMPRE los mismos campos, caption incluido):\n"
         f"{spec['ejemplo']}"
     )
     user = f"Rubro del negocio: {negocio_ejemplo}."
+    if contexto:
+        user += f"\nCaso puntual que este mockup tiene que ilustrar (no te lo salgas): {contexto}"
 
     def _validate_mockup(data: dict) -> None:
         missing = spec["required"] - data.keys()

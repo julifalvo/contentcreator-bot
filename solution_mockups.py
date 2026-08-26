@@ -13,9 +13,15 @@ from ollama_client import generate_mockup_content
 KINDS = ("web", "bot", "agente")
 
 
-def pick_mockups(negocio_ejemplo: str, count: int = 2, priority_kind: str | None = None) -> list[dict]:
+def pick_mockups(
+    negocio_ejemplo: str, count: int = 2, priority_kind: str | None = None, contexto: str = "",
+) -> list[dict]:
     """Sortea `count` tipos de mockup distintos entre sí (sin repetir kind) y
     le pide a la IA el contenido de cada uno, específico para `negocio_ejemplo`.
+
+    `contexto` (el problema/solución puntual de la pieza) se le pasa a la IA
+    para que el mockup ilustre ese caso concreto en vez de inventar un
+    ejemplo genérico del rubro sin relación con el resto del video.
 
     Si se pasa `priority_kind`, ese tipo va primero (coincide con el tipo de
     solución -web/chatbot/automatización- que protagoniza la pieza, para que
@@ -27,4 +33,4 @@ def pick_mockups(negocio_ejemplo: str, count: int = 2, priority_kind: str | None
         kinds = [priority_kind, *resto]
     else:
         kinds = random.sample(KINDS, count)
-    return [generate_mockup_content(negocio_ejemplo, kind) for kind in kinds]
+    return [generate_mockup_content(negocio_ejemplo, kind, contexto) for kind in kinds]

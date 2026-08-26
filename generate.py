@@ -87,8 +87,18 @@ def build_piece(pillar_key: str, modo: str) -> Path:
     if mockups_needed == 0:
         mockups = []
     else:
+        # Sin esto, el mockup se generaba a ciegas (solo con el rubro) y salía
+        # un ejemplo genérico sin relación con el problema/solución puntual
+        # que ya viene contando el resto del video, rompiendo el hilo.
+        contexto_mockup = (
+            f"{content['portada_text']}. Lo que cambia: {slides[2]['text']}. "
+            f"Resultado: {slides[3]['text']}."
+        )
         print(f"  Generando {mockups_needed} mockup(s) con IA...")
-        mockups = pick_mockups(content["negocio_ejemplo"], count=mockups_needed, priority_kind=tipo["mockup_kind"])
+        mockups = pick_mockups(
+            content["negocio_ejemplo"], count=mockups_needed,
+            priority_kind=tipo["mockup_kind"], contexto=contexto_mockup,
+        )
 
     # --- Gráficos + guion, recorriendo la plantilla narrativa elegida ---
     img_index = 0

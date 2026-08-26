@@ -7,6 +7,7 @@ output/
 music/*
 !music/.gitkeep
 tiktok_tokens.json
+bot.log
 tiktok*.txt
 *.jfif
 *.jpg
