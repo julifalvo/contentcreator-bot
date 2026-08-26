@@ -73,4 +73,37 @@ PILLARS = {
             "Cómo digitalizar un proceso interno sin gastar en sistemas caros",
         ],
     },
+    # A diferencia de los demás pilares (caso de un cliente, tercera persona),
+    # este usa formato distinto: situación cotidiana en segunda persona con
+    # remate cómico. Ver generate_humor() en groq_client.py.
+    "humor": {
+        "label": "Humor",
+        "emoji": "😅",
+        "formato": "humor",
+        "angle": [
+            "Los estados de tu WhatsApp de negocio en un día cualquiera",
+            "El ranking de mensajes que te llegan a las 3 de la mañana",
+            "Lo que pensás mientras contestás la misma pregunta por décima vez en la semana",
+            "La cara que pone un cliente cuando le contestás 6 horas después",
+            "Un día típico atendiendo el mostrador y el WhatsApp al mismo tiempo",
+            "Las excusas que te decís todos los meses para no automatizar todavía",
+        ],
+    },
+    # Contenido educativo "¿Sabías que...?": no cuenta el caso de un cliente
+    # ni plantea una solución puntual (nada de chat/web/flujo), solo un dato o
+    # concepto interesante. Cierra invitando a pedir más info, sin pitch. Ver
+    # generate_sabias_que() en groq_client.py / content_rules.py.
+    "sabias_que": {
+        "label": "Sabías que...?",
+        "emoji": "💡",
+        "formato": "sabias_que",
+        "angle": [
+            "Cuánto tiempo pierde en promedio un negocio chico respondiendo siempre lo mismo por WhatsApp",
+            "Qué es en criollo un agente de IA (sin la jerga técnica)",
+            "Por qué la mayoría de las consultas por WhatsApp llegan fuera del horario de atención",
+            "Qué diferencia a un chatbot de un agente de IA de verdad",
+            "Cuánto cuesta hoy automatizar algo chico en un negocio, en plata real",
+            "Por qué responder rápido importa más que responder perfecto",
+        ],
+    },
 }

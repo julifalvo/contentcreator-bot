@@ -20,7 +20,20 @@ TOKENS_PATH = Path(__file__).parent / "tiktok_tokens.json"
 TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 API_BASE = "https://open.tiktokapis.com/v2/post/publish"
 
-CHUNK_SIZE = 10 * 1024 * 1024  # 10MB por chunk, dentro de los límites de TikTok
+CHUNK_SIZE = 10 * 1024 * 1024  # tamaño de chunk cuando SÍ hace falta partir (>64MB)
+MAX_SINGLE_CHUNK = 64 * 1024 * 1024
+
+
+def _chunking(video_size: int) -> tuple[int, int]:
+    """TikTok exige un solo chunk (chunk_size == video_size, total_chunk_count
+    1) para archivos de hasta 64MB; partirlo en chunks más chicos igual (lo
+    que hacía este código con un CHUNK_SIZE fijo de 10MB) tira 400
+    'invalid_params: The total chunk count is invalid' apenas el video supera
+    los 10MB. Recién por encima de 64MB hace falta partir de verdad."""
+    if video_size <= MAX_SINGLE_CHUNK:
+        return video_size, 1
+    total_chunk_count = -(-video_size // CHUNK_SIZE)  # ceil division
+    return CHUNK_SIZE, total_chunk_count
 
 
 def _client_credentials() -> tuple[str, str]:
@@ -62,7 +75,8 @@ def get_access_token() -> str:
         },
         timeout=30,
     )
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise RuntimeError(f"TikTok respondió {resp.status_code} refrescando el token: {resp.text[:500]}")
     data = resp.json()
     if "access_token" not in data:
         raise RuntimeError(
@@ -100,7 +114,8 @@ def post_photos_to_inbox(image_urls: list[str], title: str, description: str, ac
         },
         timeout=30,
     )
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise RuntimeError(f"TikTok respondió {resp.status_code}: {resp.text[:500]}")
     data = resp.json()
     if data["error"]["code"] != "ok":
         raise RuntimeError(f"Error iniciando la subida de fotos: {data['error']}")
@@ -113,7 +128,8 @@ def query_creator_info(access_token: str) -> dict:
         headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json; charset=UTF-8"},
         timeout=30,
     )
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise RuntimeError(f"TikTok respondió {resp.status_code}: {resp.text[:500]}")
     data = resp.json()
     if data["error"]["code"] != "ok":
         raise RuntimeError(f"Error consultando creator_info: {data['error']}")
@@ -123,8 +139,7 @@ def query_creator_info(access_token: str) -> dict:
 def upload_video(video_path: Path, access_token: str, title: str, privacy_level: str) -> str:
     """Inicia la publicación y sube el archivo por chunks. Devuelve el publish_id."""
     video_size = video_path.stat().st_size
-    total_chunk_count = max(1, -(-video_size // CHUNK_SIZE))  # ceil division
-    chunk_size = video_size if total_chunk_count == 1 else CHUNK_SIZE
+    chunk_size, total_chunk_count = _chunking(video_size)
 
     init_resp = requests.post(
         f"{API_BASE}/video/init/",
@@ -146,7 +161,8 @@ def upload_video(video_path: Path, access_token: str, title: str, privacy_level:
         },
         timeout=30,
     )
-    init_resp.raise_for_status()
+    if init_resp.status_code >= 400:
+        raise RuntimeError(f"TikTok respondió {init_resp.status_code}: {init_resp.text[:500]}")
     init_data = init_resp.json()
     if init_data["error"]["code"] != "ok":
         raise RuntimeError(f"Error iniciando la publicación: {init_data['error']}")
@@ -182,8 +198,7 @@ def upload_video_to_inbox(video_path: Path, access_token: str) -> str:
     que salga; no admite post_info (título/privacidad) — eso se completa en la
     app. Devuelve el publish_id."""
     video_size = video_path.stat().st_size
-    total_chunk_count = max(1, -(-video_size // CHUNK_SIZE))  # ceil division
-    chunk_size = video_size if total_chunk_count == 1 else CHUNK_SIZE
+    chunk_size, total_chunk_count = _chunking(video_size)
 
     init_resp = requests.post(
         f"{API_BASE}/inbox/video/init/",
@@ -198,7 +213,8 @@ def upload_video_to_inbox(video_path: Path, access_token: str) -> str:
         },
         timeout=30,
     )
-    init_resp.raise_for_status()
+    if init_resp.status_code >= 400:
+        raise RuntimeError(f"TikTok respondió {init_resp.status_code}: {init_resp.text[:500]}")
     init_data = init_resp.json()
     if init_data["error"]["code"] != "ok":
         raise RuntimeError(f"Error iniciando la subida al inbox: {init_data['error']}")
@@ -243,7 +259,8 @@ def wait_for_publish(publish_id: str, access_token: str, timeout_sec: int = 300)
             json={"publish_id": publish_id},
             timeout=30,
         )
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            raise RuntimeError(f"TikTok respondió {resp.status_code} consultando el estado: {resp.text[:500]}")
         data = resp.json()["data"]
         status = data.get("status")
         if status in _TERMINAL_STATUSES:

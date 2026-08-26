@@ -21,7 +21,7 @@ MUSIC_DIR = Path(__file__).parent / "music"
 MUSIC_EXTS = {".mp3", ".m4a", ".wav", ".aac"}
 
 
-def _pick_music() -> Path | None:
+def pick_music() -> Path | None:
     if not MUSIC_DIR.exists():
         return None
     tracks = [p for p in MUSIC_DIR.iterdir() if p.suffix.lower() in MUSIC_EXTS]
@@ -42,7 +42,7 @@ def build_video(folder: Path, out_name: str = "video.mp4") -> Path:
     lines.append(f"file '{images[-1].name}'")  # ffmpeg exige repetir el último frame sin duration
     concat_path.write_text("\n".join(lines), encoding="utf-8")
 
-    music = _pick_music()
+    music = pick_music()
     out_path = folder / out_name
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
 

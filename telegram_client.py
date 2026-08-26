@@ -43,17 +43,54 @@ def _call(method: str, **kwargs) -> dict:
     # conexión de subida lenta, 30s no siempre alcanza y corta a mitad de
     # envío. 120s da margen real sin bloquear el resto del bot (no hay nada
     # más corriendo en paralelo mientras se manda la vista previa).
-    resp = requests.post(url, timeout=120, **kwargs)
-    resp.raise_for_status()
-    data = resp.json()
-    if not data.get("ok"):
-        raise RuntimeError(f"Telegram API error en {method}: {data}")
-    return data["result"]
+    #
+    # Un corte de conexión (ConnectionResetError, wifi que titubea, etc.) es
+    # transitorio y reintentar casi siempre alcanza — pasó de verdad una vez
+    # y tiró abajo el paso del wizard con un traceback en vez de reintentar
+    # solo. Con archivos (fotos/video) NO reintentamos: si la conexión se
+    # cortó a mitad de subida, el file handle ya se consumió en parte y un
+    # reintento ciego mandaría un archivo corrupto/vacío.
+    intentos = 1 if "files" in kwargs else 3
+    ultimo_error: Exception | None = None
+    for intento in range(1, intentos + 1):
+        try:
+            resp = requests.post(url, timeout=120, **kwargs)
+            resp.raise_for_status()
+            data = resp.json()
+            if not data.get("ok"):
+                raise RuntimeError(f"Telegram API error en {method}: {data}")
+            return data["result"]
+        except requests.exceptions.ConnectionError as e:
+            ultimo_error = e
+            if intento < intentos:
+                print(f"  (Telegram: corte de conexión en {method}, reintento {intento}/{intentos - 1} en 3s...)")
+                time.sleep(3)
+    raise RuntimeError(f"Telegram sin conexión tras {intentos} intento(s) en {method}: {ultimo_error}")
 
 
 def send_message(text: str) -> None:
     """Manda un mensaje de texto simple (ej: el caption listo para copiar y pegar)."""
     _call("sendMessage", data={"chat_id": _chat_id(), "text": text})
+
+
+def _mandar_botones_aprobar() -> int:
+    """El mensaje con Aprobar/Cancelar que sigue a la vista previa (imágenes o
+    video). Devuelve el message_id, para identificar la respuesta después."""
+    keyboard = {
+        "inline_keyboard": [[
+            {"text": "✅ Aprobar y publicar", "callback_data": "approve"},
+            {"text": "❌ Cancelar", "callback_data": "cancel"},
+        ]]
+    }
+    result = _call(
+        "sendMessage",
+        data={
+            "chat_id": _chat_id(),
+            "text": "¿Publico esto en TikTok?",
+            "reply_markup": json.dumps(keyboard),
+        },
+    )
+    return result["message_id"]
 
 
 def send_preview(images: list[Path], caption: str) -> int:
@@ -83,19 +120,38 @@ def send_preview(images: list[Path], caption: str) -> int:
             for fh in open_files:
                 fh.close()
 
+    return _mandar_botones_aprobar()
+
+
+def send_video_preview(video_path: Path, caption: str) -> int:
+    """Manda el video narrado como vista previa y el mensaje con botones
+    Aprobar/Cancelar. Igual que send_preview() pero para el formato de video
+    (un solo archivo en vez de álbum de fotos)."""
+    with video_path.open("rb") as fh:
+        _call(
+            "sendVideo",
+            data={"chat_id": _chat_id(), "caption": caption[:1024]},
+            files={"video": (video_path.name, fh, "video/mp4")},
+        )
+
+    return _mandar_botones_aprobar()
+
+
+def send_choice(text: str, rows: list[list[tuple[str, str]]]) -> int:
+    """Manda un mensaje con un teclado inline arbitrario, para flujos de
+    elección paso a paso (ver el wizard de /generar en bot.py). `rows` es una
+    lista de filas, cada fila una lista de (texto_del_botón, callback_data).
+    Devuelve el message_id, para poder identificar la respuesta y limpiar el
+    teclado después con clear_keyboard()."""
     keyboard = {
-        "inline_keyboard": [[
-            {"text": "✅ Aprobar y publicar", "callback_data": "approve"},
-            {"text": "❌ Cancelar", "callback_data": "cancel"},
-        ]]
+        "inline_keyboard": [
+            [{"text": label, "callback_data": data} for label, data in row]
+            for row in rows
+        ]
     }
     result = _call(
         "sendMessage",
-        data={
-            "chat_id": chat_id,
-            "text": "¿Publico esto en TikTok?",
-            "reply_markup": json.dumps(keyboard),
-        },
+        data={"chat_id": _chat_id(), "text": text, "reply_markup": json.dumps(keyboard)},
     )
     return result["message_id"]
 
@@ -116,15 +172,28 @@ def get_updates(offset: int | None = None, timeout: int = 25) -> list[dict]:
 
 
 def answer_callback(callback_query_id: str) -> None:
-    _call("answerCallbackQuery", data={"callback_query_id": callback_query_id})
+    """Confirma el tap a Telegram (saca el 'cargando...' del botón). No es
+    crítico: Telegram rechaza con 400 si el callback ya venció (mensaje
+    viejo, doble tap, etc.), y eso NO puede tirar abajo el procesamiento real
+    del click — mejor perder el spinner que perder el /generar o el aprobar."""
+    try:
+        _call("answerCallbackQuery", data={"callback_query_id": callback_query_id})
+    except requests.exceptions.RequestException as e:
+        print(f"  (no se pudo confirmar el callback a Telegram, sigo igual: {e})")
 
 
 def clear_keyboard(message_id: int) -> None:
-    """Saca los botones de un mensaje (para que no se pueda volver a tocar Aprobar/Cancelar)."""
-    _call(
-        "editMessageReplyMarkup",
-        data={"chat_id": _chat_id(), "message_id": message_id, "reply_markup": "{}"},
-    )
+    """Saca los botones de un mensaje (para que no se pueda volver a tocar Aprobar/Cancelar
+    o un paso viejo del wizard). Tampoco es crítico: un doble tap o un mensaje
+    ya editado hacen que Telegram conteste 400 ('message is not modified' o
+    similar) — no tiene sentido que eso crashee el procesamiento del click."""
+    try:
+        _call(
+            "editMessageReplyMarkup",
+            data={"chat_id": _chat_id(), "message_id": message_id, "reply_markup": "{}"},
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"  (no se pudo limpiar el teclado del mensaje {message_id}, sigo igual: {e})")
 
 
 def wait_for_approval(message_id: int, timeout_sec: int = 7200) -> bool:

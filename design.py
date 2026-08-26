@@ -131,26 +131,47 @@ h2 {{
   letter-spacing:-.045em; color:{p['accent']};
 }}
 .stat-unit {{ font-size:46px; font-weight:600; letter-spacing:-.01em; margin-top:18px; }}
-/* --- Chat --- */
-.chat {{ display:flex; flex-direction:column; gap:30px; }}
-.msg {{ max-width:74%; padding:38px 46px; font-size:42px; line-height:1.42; }}
-.msg-in {{
-  align-self:flex-start; background:#FFFFFF; color:{p['ink']};
-  border:1px solid {p['rule']}; border-radius:8px 30px 30px 30px;
-  box-shadow:0 18px 44px rgba(28,23,20,.09);
+/* --- Chat: imita una captura real de WhatsApp, no un diagrama editorial --- */
+.chat-app {{
+  border-radius:32px; overflow:hidden; background:#E7E0D3;
+  border:1px solid {p['rule']}; box-shadow:0 40px 90px rgba(28,23,20,.2);
 }}
-.msg-out {{
-  align-self:flex-end; background:{p['accent']}; color:#FFF9F2;
-  border-radius:30px 8px 30px 30px;
-  box-shadow:0 20px 48px rgba(28,23,20,.17);
+.chat-head {{
+  display:flex; align-items:center; gap:24px; padding:32px 36px;
+  background:{p['accent']}; color:#FFF9F2;
 }}
-.msg-tag {{
-  font-size:20px; letter-spacing:.24em; text-transform:uppercase;
-  color:{p['dim']}; margin-bottom:12px;
+.chat-avatar {{
+  width:68px; height:68px; border-radius:50%; flex:none;
+  background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center;
+  font-family:'Display', serif; font-weight:700; font-size:32px;
+}}
+.chat-name {{ font-size:32px; font-weight:600; }}
+.chat-status {{ font-size:22px; opacity:.82; margin-top:4px; }}
+.chat-body {{ padding:50px 40px; display:flex; flex-direction:column; gap:26px; }}
+.bubble {{ max-width:80%; padding:28px 34px; font-size:38px; line-height:1.4; }}
+.bubble-in {{
+  align-self:flex-start; background:#FFFFFF; color:#1B1B1B;
+  border-radius:6px 26px 26px 26px; box-shadow:0 10px 26px rgba(28,23,20,.1);
+}}
+.bubble-out {{
+  align-self:flex-end; background:#DCF8C6; color:#1B1B1B;
+  border-radius:26px 6px 26px 26px; box-shadow:0 10px 26px rgba(28,23,20,.1);
+}}
+.bubble-meta {{
+  display:block; margin-top:14px; font-size:22px; opacity:.55; text-align:right;
+}}
+.bubble-check {{ color:#3DA0E8; margin-left:4px; }}
+.chat-inputbar {{
+  display:flex; align-items:center; padding:26px 36px;
+  background:#F0EAE0; border-top:1px solid rgba(0,0,0,.06);
+}}
+.chat-inputbar .pill {{
+  flex:1; background:#FFFFFF; border-radius:999px; padding:22px 32px;
+  font-size:28px; color:#8A8A8A;
 }}
 /* --- Navegador --- */
 .browser {{
-  border-radius:20px; overflow:hidden; background:#FFFFFF;
+  position:relative; border-radius:20px; overflow:hidden; background:#FFFFFF;
   border:1px solid {p['rule']}; box-shadow:0 40px 90px rgba(28,23,20,.17);
 }}
 .bar {{
@@ -172,6 +193,31 @@ h2 {{
   display:inline-block; margin-top:42px; background:{p['accent']}; color:#FFF9F2;
   font-size:30px; font-weight:600; padding:26px 52px; border-radius:999px;
 }}
+/* --- Widget de chat flotante sobre la captura del sitio ---
+   En flujo normal (no absolute): alineado a la derecha con margin-left:auto
+   y un margin-top negativo para que "flote" sobre el borde del botón, sin
+   riesgo de taparse con chips/headline como pasaba al posicionarlo absoluto
+   (con contenido variable, el absolute terminaba tapando el último chip). */
+.web-widget {{
+  width:340px; margin:-46px 0 0 auto;
+  background:#FFFFFF; border-radius:20px; overflow:hidden;
+  box-shadow:0 24px 60px rgba(28,23,20,.28); border:1px solid {p['rule']};
+}}
+.web-widget-head {{
+  display:flex; align-items:center; gap:14px; padding:20px 22px;
+  background:{p['accent']}; color:#FFF9F2;
+}}
+.web-widget-dot {{
+  width:14px; height:14px; border-radius:50%; background:#3DDC84;
+  box-shadow:0 0 0 4px rgba(61,220,132,.28); flex:none;
+}}
+.web-widget-title {{ font-size:22px; font-weight:600; }}
+.web-widget-sub {{ font-size:17px; opacity:.85; margin-top:2px; }}
+.web-widget-body {{ padding:20px 22px; font-size:19px; color:{p['dim']}; line-height:1.4; }}
+.web-widget-bubble {{
+  background:{p['bg2']}; border-radius:14px; padding:14px 18px; margin-top:10px;
+  font-size:19px; color:{p['ink']};
+}}
 /* --- Flujo de pasos --- */
 .steps {{ display:flex; flex-direction:column; gap:0; }}
 .step {{ display:flex; gap:44px; padding:52px 0; border-top:1px solid {p['rule']}; }}
@@ -186,6 +232,61 @@ h2 {{
   font-family:'Display', serif; font-size:250px; line-height:.6;
   color:{p['accent']}; opacity:.26;
 }}
+/* --- Foto (imagen real generada por IA) --- */
+.photo-card {{
+  position:relative; border-radius:24px; overflow:hidden;
+  box-shadow:0 40px 90px rgba(28,23,20,.22);
+}}
+.photo-card img {{ display:block; width:100%; height:auto; }}
+.photo-scrim {{
+  position:absolute; left:0; right:0; bottom:0; padding:90px 46px 46px;
+  background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 100%);
+}}
+.photo-caption {{
+  font-family:'Display', serif; font-weight:700; font-size:52px; color:#FFF9F2; line-height:1.14;
+}}
+/* --- Código (mockup de editor, para transmitir que hay tecnología real) --- */
+.code-window {{
+  border-radius:20px; overflow:hidden; background:#1E1E1E;
+  box-shadow:0 40px 90px rgba(28,23,20,.24);
+}}
+.code-bar {{
+  display:flex; align-items:center; gap:12px; padding:26px 30px;
+  background:#2A2A2A; border-bottom:1px solid #383838;
+}}
+.code-tab {{
+  margin-left:14px; font-family:'Body', monospace; font-size:24px; color:#B8B8B8;
+  background:#1E1E1E; padding:10px 24px; border-radius:8px 8px 0 0;
+}}
+.code-body {{ padding:48px 44px; }}
+.code-line {{
+  display:flex; gap:32px; font-family:'Consolas','Courier New',monospace;
+  font-size:34px; line-height:1.7; white-space:pre-wrap; word-break:break-word;
+}}
+.code-n {{ color:#5A5A5A; min-width:44px; text-align:right; user-select:none; }}
+.code-t {{ color:#E8E8E8; }}
+.code-t.is-comment {{ color:#6A9955; font-style:italic; }}
+/* --- Comparación: chatbot común vs agente IA --- */
+.compare {{ display:flex; gap:28px; }}
+.compare-col {{ flex:1; border-radius:20px; padding:40px 34px; }}
+.compare-col.is-chatbot {{ background:{p['bg2']}; border:1px solid {p['rule']}; }}
+.compare-col.is-agente {{
+  background:{p['accent']}; box-shadow:0 30px 70px rgba(28,23,20,.2);
+}}
+.compare-head {{
+  font-size:26px; font-weight:700; letter-spacing:.04em;
+  margin-bottom:30px;
+}}
+.compare-col.is-chatbot .compare-head {{ color:{p['dim']}; }}
+.compare-col.is-agente .compare-head {{ color:#FFF9F2; }}
+.compare-item {{
+  display:flex; gap:16px; align-items:flex-start; font-size:30px; line-height:1.35;
+  margin-top:26px;
+}}
+.compare-item:first-of-type {{ margin-top:0; }}
+.compare-col.is-chatbot .compare-item {{ color:{p['dim']}; }}
+.compare-col.is-agente .compare-item {{ color:#FFF9F2; }}
+.compare-mark {{ flex:none; font-weight:700; }}
 """
 
 
@@ -234,22 +335,35 @@ def _texto(s: dict, p: dict) -> str:
 
 
 def _chat(s: dict, p: dict) -> str:
+    """Slide 'chat': se renderiza como una captura real de WhatsApp (header con
+    avatar + estado, burbujas blanca/verde con tail, doble check azul en la
+    respuesta), no como el diagrama editorial de antes — que se veía como un
+    gráfico armado, no como algo que el espectador reconozca de su propio celular."""
+    nombre, _, meta = s["quien_entra"].partition("·")
+    nombre = nombre.strip() or s["quien_entra"]
+    meta = meta.strip() or "en línea"
+    inicial = html.escape((nombre[:1] or "?").upper())
     pie = (
-        f'<div class="body-l" style="margin-top:56px; font-size:32px">{html.escape(s["pie"])}</div>'
+        f'<div class="body-l" style="margin-top:48px; font-size:32px">{html.escape(s["pie"])}</div>'
         if s.get("pie") else ""
     )
     return f"""<div>
 <h2 style="font-size:64px">{html.escape(s['titular'])}</h2>
-<div class="chat" style="margin-top:70px">
-<div><div class="msg-tag">{html.escape(s['quien_entra'])}</div>
-<div class="msg msg-in">{html.escape(s['entrada'])}</div></div>
-<div style="align-self:flex-end; text-align:right">
-<div class="msg-tag">{html.escape(s['quien_responde'])}</div>
-<div class="msg msg-out" style="text-align:left">{html.escape(s['respuesta'])}</div></div>
+<div class="chat-app" style="margin-top:64px">
+<div class="chat-head"><div class="chat-avatar">{inicial}</div>
+<div><div class="chat-name">{html.escape(nombre)}</div><div class="chat-status">{html.escape(meta)}</div></div></div>
+<div class="chat-body">
+<div class="bubble bubble-in">{html.escape(s['entrada'])}<span class="bubble-meta">{html.escape(meta)}</span></div>
+<div class="bubble bubble-out">{html.escape(s['respuesta'])}<span class="bubble-meta">{html.escape(s['quien_responde'])} <span class="bubble-check">&#10003;&#10003;</span></span></div>
+</div>
+<div class="chat-inputbar"><span class="pill">Escribí un mensaje...</span></div>
 </div>{pie}</div>"""
 
 
 def _web(s: dict, p: dict) -> str:
+    """Slide 'web': captura de navegador con un widget de chat flotante
+    (agente IA 'en línea') superpuesto abajo a la derecha, como el que
+    tendría de verdad el sitio de un negocio con un agente instalado."""
     chips = "".join(f'<span class="chip">{html.escape(c)}</span>' for c in s.get("chips", []))
     return f"""<div>
 <h2 style="font-size:60px">{html.escape(s['titular'])}</h2>
@@ -262,7 +376,14 @@ def _web(s: dict, p: dict) -> str:
 <div class="body-l" style="margin-top:26px; font-size:32px">{html.escape(s['bajada'])}</div>
 <div class="chips">{chips}</div>
 <div class="btn">{html.escape(s['boton'])}</div>
-</div></div></div>"""
+</div>
+<div class="web-widget">
+<div class="web-widget-head"><span class="web-widget-dot"></span>
+<div><div class="web-widget-title">Agente IA</div><div class="web-widget-sub">En línea ahora</div></div></div>
+<div class="web-widget-body">Hola&#128075; ¿en qué te puedo ayudar?
+<div class="web-widget-bubble">Escribime tu consulta y te respondo al toque.</div></div>
+</div>
+</div></div>"""
 
 
 def _flujo(s: dict, p: dict) -> str:
@@ -290,6 +411,60 @@ def _cierre(s: dict, p: dict) -> str:
 <div class="lead" style="max-width:84%">{html.escape(s['accion'])}</div></div>"""
 
 
+def _foto(s: dict, p: dict) -> str:
+    """Slide 'foto': una imagen real (generada por IA vía image_gen.py) con
+    pie de foto superpuesto. La IA de texto solo elige 'prompt_imagen'; el
+    data URI ('_img_data_uri') lo agrega generate.py después de pedirle la
+    imagen a Pollinations, antes de llamar a build_slide_html — por eso no es
+    un campo obligatorio en BUILDERS (no lo escribe la IA de texto)."""
+    img = s.get("_img_data_uri", "")
+    return f"""<div class="photo-card">
+<img src="{img}" alt="">
+<div class="photo-scrim"><div class="photo-caption">{html.escape(s['titular'])}</div></div>
+</div>"""
+
+
+def _codigo(s: dict, p: dict) -> str:
+    """Slide 'código': mockup de editor (estilo VS Code) con unas pocas
+    líneas de pseudocódigo ilustrativo — no tiene que compilar de verdad,
+    solo transmitir que hay tecnología real atrás de la pieza de marketing."""
+    lineas = ""
+    for i, linea in enumerate(s.get("codigo", []), 1):
+        es_comentario = linea.strip().startswith(("#", "//"))
+        clase = " is-comment" if es_comentario else ""
+        lineas += (
+            f'<div class="code-line"><span class="code-n">{i}</span>'
+            f'<span class="code-t{clase}">{html.escape(linea)}</span></div>'
+        )
+    return f"""<div>
+<h2 style="font-size:60px">{html.escape(s['titular'])}</h2>
+<div class="code-window" style="margin-top:56px">
+<div class="code-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+<span class="code-tab">{html.escape(s.get('lenguaje', 'código'))}</span></div>
+<div class="code-body">{lineas}</div>
+</div></div>"""
+
+
+def _comparacion(s: dict, p: dict) -> str:
+    """Slide 'comparación': dos columnas lado a lado, chatbot básico (dim,
+    con ✕) contra agente IA (color de acento, con ✓) — para que la
+    diferencia entre uno y otro se vea de un vistazo."""
+    chatbot_items = "".join(
+        f'<div class="compare-item"><span class="compare-mark">✕</span><span>{html.escape(x)}</span></div>'
+        for x in s.get("chatbot", [])
+    )
+    agente_items = "".join(
+        f'<div class="compare-item"><span class="compare-mark">✓</span><span>{html.escape(x)}</span></div>'
+        for x in s.get("agente", [])
+    )
+    return f"""<div>
+<h2 style="font-size:60px">{html.escape(s['titular'])}</h2>
+<div class="compare" style="margin-top:56px">
+<div class="compare-col is-chatbot"><div class="compare-head">CHATBOT COMÚN</div>{chatbot_items}</div>
+<div class="compare-col is-agente"><div class="compare-head">AGENTE IA</div>{agente_items}</div>
+</div></div>"""
+
+
 BUILDERS = {
     "portada": (_portada, {"titular"}),
     "dato": (_dato, {"numero", "unidad", "detalle"}),
@@ -298,6 +473,9 @@ BUILDERS = {
     "web": (_web, {"titular", "url", "headline", "bajada", "boton"}),
     "flujo": (_flujo, {"titular", "pasos"}),
     "cita": (_cita, {"texto", "autor"}),
+    "foto": (_foto, {"titular", "prompt_imagen"}),
+    "codigo": (_codigo, {"titular", "codigo"}),
+    "comparacion": (_comparacion, {"titular", "chatbot", "agente"}),
     "cierre": (_cierre, {"titular", "accion"}),
 }
 

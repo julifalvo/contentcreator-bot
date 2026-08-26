@@ -1,11 +1,14 @@
 """CLI: genera un carrusel de TikTok (imágenes + caption) para el perfil de negocios/IA.
 
 Pipeline:
-    ángulo (config.PILLARS) -> Groq escribe la historia y la parte en slides
+    ángulo (config.PILLARS) -> ai_providers.py le pide el texto a Groq o
+    Gemini (el que esté disponible, alternando entre los dos) -> si alguna
+    slide es tipo 'foto', image_gen.py le pide esa imagen a Pollinations.ai
     -> design.py arma el HTML editorial de cada slide -> Chrome headless lo
     rinde a PNG 1080x1920.
 
-Todo gratis: Groq tiene free tier sin tarjeta y el render es local.
+Todo gratis: Groq/Gemini tienen free tier sin tarjeta, Pollinations no pide
+ni API key, y el render es local.
 
 Uso:
     python generate.py --pillar automatizacion
@@ -26,32 +29,55 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 import design
+import image_gen
 import render
+import video_narrado
+from ai_providers import generate_carousel, generate_humor, generate_sabias_que, generate_video_script
 from config import PILLARS, RUBROS
-from groq_client import generate_carousel
 
 OUTPUT_DIR = Path(__file__).parent / "output"
+
+# Pilares cuyo formato NO es el caso de cliente en tercera persona (llevan
+# "tema" en vez de "negocio"/"ancla"/"historia" en el JSON que devuelve la IA).
+_FORMATOS_SIN_CASO = {"humor", "sabias_que"}
+
+# El formato 'video narrado' (voz de ElevenLabs + b-roll de Pexels, ver
+# video_rules.py) todavía es solo para el caso serio de cliente en tercera
+# persona: no soporta humor ni el formato educativo 'sabías que'.
+PILARES_VIDEO = [k for k, p in PILLARS.items() if p.get("formato") not in _FORMATOS_SIN_CASO]
 
 
 def slugify(text: str) -> str:
     return "".join(c if c.isalnum() else "-" for c in text.lower()).strip("-")[:40]
 
 
-def build_piece(pillar_key: str) -> Path:
+def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = False) -> Path:
     pillar = PILLARS[pillar_key]
-    angulo = random.choice(pillar["angle"])
-    rubro = random.choice(RUBROS)
+    angulo = angulo or random.choice(pillar["angle"])
     palette = design.pick_palette()
+    formato = pillar.get("formato", "caso")
+    sin_caso = formato in _FORMATOS_SIN_CASO
 
     print(f"→ {pillar['label']} — {angulo}")
-    print(f"  Rubro: {rubro}")
-    data = generate_carousel(pillar["label"], angulo, rubro)
-    print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
+    if formato == "humor":
+        data = generate_humor(pillar["label"], angulo, con_foto)
+    elif formato == "sabias_que":
+        data = generate_sabias_que(pillar["label"], angulo, con_foto)
+    else:
+        rubro = random.choice(RUBROS)
+        print(f"  Rubro: {rubro}")
+        data = generate_carousel(pillar["label"], angulo, rubro, con_foto)
+        print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
 
     slides = data["slides"]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_{slugify(slides[0]['titular'])}"
     folder.mkdir(parents=True, exist_ok=True)
+
+    for slide in slides:
+        if slide.get("tipo") == "foto":
+            print(f"  Generando imagen: {slide['prompt_imagen'][:70]}...")
+            slide["_img_data_uri"] = image_gen.fetch_image_data_uri(slide["prompt_imagen"])
 
     print(f"  Renderizando {len(slides)} slides ({palette['name']})...")
     for i, slide in enumerate(slides, 1):
@@ -59,10 +85,85 @@ def build_piece(pillar_key: str) -> Path:
         render.html_to_png(html, folder / f"{i:02d}_{slide['tipo']}.png")
 
     hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
+    # '_img_data_uri' no es contenido de la IA de texto (lo agrega el paso de
+    # arriba con la imagen ya descargada): afuera del guion y del JSON, o cada
+    # pieza con foto dejaría un contenido.json de varios MB en base64.
     guion = "\n\n".join(
         f"Slide {i} ({s['tipo']}): "
-        + " | ".join(f"{k}: {v}" for k, v in s.items() if k != "tipo")
+        + " | ".join(f"{k}: {v}" for k, v in s.items() if k not in ("tipo", "_img_data_uri"))
         for i, s in enumerate(slides, 1)
+    )
+    if sin_caso:
+        cabecera = f"""PILAR: {pillar['label']}
+ÁNGULO: {angulo}
+TEMA: {data['tema']}"""
+    else:
+        cabecera = f"""PILAR: {pillar['label']}
+ÁNGULO: {angulo}
+NEGOCIO: {data['negocio']}
+DETALLE ANCLA: {data['ancla']}
+
+HISTORIA (lo que el carrusel cuenta de punta a punta):
+  {data['historia']}"""
+
+    (folder / "contenido.txt").write_text(
+        f"""{cabecera}
+
+{guion}
+
+CAPTION PARA TIKTOK:
+  {data['caption']}
+
+HASHTAGS:
+  {hashtag_line}
+""",
+        encoding="utf-8",
+    )
+    data_sin_imagenes = {
+        **data,
+        "slides": [{k: v for k, v in s.items() if k != "_img_data_uri"} for s in slides],
+    }
+    (folder / "contenido.json").write_text(
+        json.dumps({**data_sin_imagenes, "formato": "carrusel", "paleta": palette["name"],
+                    "pilar": pillar_key, "angulo": angulo},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    print(f"  ✓ Listo: {folder}")
+    return folder
+
+
+def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
+    """Arma un video narrado (voz de ElevenLabs + b-roll de Pexels) en vez de
+    un carrusel de imágenes. Solo para los pilares de caso (no humor, ver
+    PILARES_VIDEO)."""
+    if pillar_key not in PILARES_VIDEO:
+        raise ValueError(f"El pilar '{pillar_key}' no soporta el formato video (solo: {PILARES_VIDEO})")
+
+    pillar = PILLARS[pillar_key]
+    angulo = angulo or random.choice(pillar["angle"])
+    rubro = random.choice(RUBROS)
+
+    print(f"→ [video] {pillar['label']} — {angulo}")
+    print(f"  Rubro: {rubro}")
+    data = generate_video_script(pillar["label"], angulo, rubro)
+    print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    titular = data["escenas"][0].get("on_screen") or data["negocio"]
+    folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_video_{slugify(titular)}"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    print(f"  Armando video ({len(data['escenas'])} escenas: locución + b-roll)...")
+    video_narrado.build_video(folder, data)
+
+    hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
+    guion = "\n\n".join(
+        f"Escena {i}: {e['narracion']}"
+        + (f"\n  (en pantalla: {e['on_screen']})" if e.get("on_screen") else "")
+        + f"\n  (b-roll: {e['b_roll']})"
+        for i, e in enumerate(data["escenas"], 1)
     )
     (folder / "contenido.txt").write_text(
         f"""PILAR: {pillar['label']}
@@ -70,7 +171,7 @@ def build_piece(pillar_key: str) -> Path:
 NEGOCIO: {data['negocio']}
 DETALLE ANCLA: {data['ancla']}
 
-HISTORIA (lo que el carrusel cuenta de punta a punta):
+HISTORIA (lo que el video cuenta de punta a punta):
   {data['historia']}
 
 {guion}
@@ -84,7 +185,7 @@ HASHTAGS:
         encoding="utf-8",
     )
     (folder / "contenido.json").write_text(
-        json.dumps({**data, "paleta": palette["name"], "pilar": pillar_key, "angulo": angulo},
+        json.dumps({**data, "formato": "video", "pilar": pillar_key, "angulo": angulo},
                    ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -98,6 +199,8 @@ def main() -> None:
     parser.add_argument("--pillar", default="random", choices=list(PILLARS) + ["random"],
                         help="Pilar de contenido (default: random)")
     parser.add_argument("--count", type=int, default=1, help="Cantidad de piezas a generar")
+    parser.add_argument("--foto", action="store_true",
+                        help="Permite que el modelo elija una slide de foto real (Pollinations). Off por default.")
     parser.add_argument("--list-pillars", action="store_true", help="Lista los pilares y sale")
     args = parser.parse_args()
 
@@ -110,7 +213,7 @@ def main() -> None:
     for _ in range(args.count):
         pillar_key = random.choice(list(PILLARS)) if args.pillar == "random" else args.pillar
         try:
-            build_piece(pillar_key)
+            build_piece(pillar_key, con_foto=args.foto)
         except RuntimeError as e:
             print(f"\n✗ {e}", file=sys.stderr)
             sys.exit(1)

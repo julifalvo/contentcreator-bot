@@ -5,7 +5,7 @@ URL pública de un dominio/prefijo que ya verificaste ante TikTok, no admite
 subir el archivo directo como el video.
 
 Requiere tener clonado localmente el repo (una vez):
-    git clone https://github.com/julifa/rootbusinessai-legal.git _legal_repo
+    git clone https://github.com/julifalvo/rootbusinessai-legal.git _legal_repo
 Con permisos de push ya autenticados en esta máquina (vía git/gh).
 """
 
@@ -20,7 +20,7 @@ from PIL import Image
 
 REPO_DIR = Path(__file__).parent / "_legal_repo"
 CONTENT_DIR = REPO_DIR / "content"
-PUBLIC_BASE_URL = "https://julifa.github.io/rootbusinessai-legal/content"
+PUBLIC_BASE_URL = "https://julifalvo.github.io/rootbusinessai-legal/content"
 
 # Cuántas publicaciones anteriores conservar en el repo antes de purgarlas
 # (además de la que se acaba de subir). Solo para no dejar crecer el repo sin
@@ -59,7 +59,7 @@ def publish_images(image_paths: list[Path]) -> list[str]:
     if not REPO_DIR.exists():
         raise RuntimeError(
             f"No existe {REPO_DIR}. Cloná el repo de hosting una vez con:\n"
-            f"  git clone https://github.com/julifa/rootbusinessai-legal.git {REPO_DIR}"
+            f"  git clone https://github.com/julifalvo/rootbusinessai-legal.git {REPO_DIR}"
         )
 
     _run_git("pull", "--ff-only", "origin", "main")
