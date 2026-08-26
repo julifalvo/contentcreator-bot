@@ -29,39 +29,59 @@ NARRATIVE_TEMPLATES = [
     ["portada", "slide:0", "mockup:0", "demo", "slide:3", "foto", "cta"],
 ]
 
-# Pilares temáticos del perfil (negocios en automático / agentes AI / chatbots)
+# Pilares temáticos del perfil (negocios en automático / agentes AI / chatbots).
+# Cada pilar trae varios ÁNGULOS puntuales (no uno solo): generate.py sortea
+# uno distinto por pieza y se lo pasa a la IA como semilla concreta, para que
+# no dependa de un banco de casos escrito a mano ni se repita siempre la misma
+# idea. Entre los 4 pilares suman ~24 ángulos.
 PILLARS = {
     "automatizacion": {
         "label": "Automatización",
         "emoji": "⚙️",
-        "angle": (
-            "Cómo un negocio puede dejar de hacer tareas repetitivas a mano "
-            "gracias a la automatización con IA y flujos automáticos."
-        ),
+        "angle": [
+            "Cómo un agente de WhatsApp carga pedidos automáticamente sin que nadie tipee nada",
+            "Cómo automatizar el recordatorio de turnos para bajar los faltazos",
+            "Cómo un bot avisa cuando se está por agotar el stock de un producto",
+            "Cómo automatizar el armado de un pedido a partir de un audio de voz",
+            "Cómo eliminar las respuestas repetidas a la misma pregunta de siempre",
+            "Cómo automatizar el alta de un cliente nuevo sin cargar datos a mano",
+        ],
     },
     "eficiencia_comercial": {
         "label": "Eficiencia Comercial",
         "emoji": "📈",
-        "angle": (
-            "Cómo un chatbot o agente de IA ayuda a vender más rápido, "
-            "responder leads al instante y cerrar más ventas."
-        ),
+        "angle": [
+            "Cómo un agente responde leads al instante para no perder ventas por tardar",
+            "Cómo cotizar automáticamente sin que el cliente espere horas",
+            "Cómo reservar turnos por WhatsApp sin que se pisen los horarios",
+            "Cómo un agente distingue una urgencia real de una consulta común",
+            "Cómo recuperar a un cliente que preguntó precio y no volvió a escribir",
+            "Cómo cerrar una venta por chat sin que un vendedor esté siempre online",
+        ],
     },
     "optimizacion_operativa": {
         "label": "Optimización Operativa",
         "emoji": "🛠️",
-        "angle": (
-            "Cómo optimizar procesos internos (soporte, agenda, cobros, "
-            "inventario) usando agentes de IA para ahorrar tiempo y errores."
-        ),
+        "angle": [
+            "Cómo automatizar el cobro de cuotas mensuales sin perseguir a nadie",
+            "Cómo cubrir automáticamente un turno cancelado con la lista de espera",
+            "Cómo controlar el stock de un negocio sin revisar todo a ojo",
+            "Cómo ordenar la agenda de un negocio que antes vivía en un cuaderno",
+            "Cómo evitar que un insumo se termine sin que nadie lo note",
+            "Cómo automatizar el armado de fichas o legajos de clientes nuevos",
+        ],
     },
     "transformacion": {
         "label": "Transformación Digital",
         "emoji": "🚀",
-        "angle": (
-            "Cómo un negocio tradicional se transforma al adoptar IA y "
-            "automatización, y por qué quedarse atrás es un riesgo real."
-        ),
+        "angle": [
+            "Cómo un negocio de toda la vida empieza a vender también por WhatsApp",
+            "Cómo pasar de un cuaderno de turnos a un agente que agenda solo",
+            "Cómo un local que dependía solo del mostrador suma un canal digital",
+            "Cómo modernizar la atención al cliente sin cambiar todo el negocio",
+            "Cómo un negocio chico compite con cadenas más grandes usando IA",
+            "Cómo digitalizar un proceso interno sin gastar en sistemas caros",
+        ],
     },
 }
 
@@ -217,18 +237,3 @@ STYLES = [
 STYLE = dict(STYLES[0])
 
 HANDLE = "@rootbusinessai"
-
-HASHTAGS_BASE = [
-    "automatizacion", "iaparanegocios", "chatbots", "agentesia",
-    "emprendimiento", "negociosdigitales", "productividad", "tiktokbusiness",
-]
-
-CTAS = [
-    "Escribime y te digo cuánto estás perdiendo",
-    "Comentá 'AUTO' y te armo el primer flujo",
-    "Guardalo antes de perder otro cliente",
-    "¿Cuánto más vas a seguir haciéndolo a mano?",
-    "Seguime si no querés seguir perdiendo mensajes",
-    "Contame tu caso y te digo por dónde empezar",
-    "Esto ya lo tiene tu competencia. ¿Y vos?",
-]

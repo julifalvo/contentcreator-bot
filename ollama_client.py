@@ -148,7 +148,10 @@ SYSTEM_PROMPT = (
     "}"
 )
 
-_REQUIRED_TOP = {"negocio_ejemplo", "demo", "portada_text", "slides", "cta_slide_text", "caption", "hashtags"}
+_REQUIRED_TOP = {
+    "negocio_ejemplo", "demo", "portada_text", "slides", "cta_slide_text",
+    "cta_final", "swipe_hint", "demo_caption", "caption", "hashtags",
+}
 _REQUIRED_DEMO = {"canal", "mensaje_cliente", "respuesta_bot", "tiempo_respuesta"}
 _REQUIRED_SLIDE = {"title", "text"}
 
@@ -158,6 +161,9 @@ _NO_VOSEO = {
     "pierdes", "tienes", "puedes", "quieres", "haces", "necesitas", "estás perdiendo tú",
     "escríbeme", "cuéntame", "conéctame", "contáctame", "dime", "mírame",
     "tu puedes", "te quedas", "coger", "ordenador", "móvil", "vale",
+    "vuelves", "sabes", "crees", "sientes", "eres", "vienes", "dices",
+    "sigues", "duermes", "comes", "sales", "mueves", "entiendes", "debes",
+    "escribes", "mandas", "llamas", "recibes", "pides", "envías", "buscas",
 }
 _UNIDADES = ("por semana", "a la semana", "semanal", "por mes", "al mes", "mensual", "por día", "al día", "diario")
 

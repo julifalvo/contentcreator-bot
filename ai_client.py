@@ -32,9 +32,22 @@ SYSTEM_PROMPT = (
     "inmobiliaria, un gimnasio) — no 'un negocio' genérico.\n"
     "- Usá números y detalles concretos siempre que se pueda (tiempos, cantidad de mensajes, "
     "horarios), nunca 'mucho', 'rápido' o 'fácil' sin un dato al lado.\n"
-    "- Texto natural, como lo escribiría una persona, no un folleto corporativo. Frases cortas.\n"
+    "- Texto natural, como lo escribiría una persona, no un folleto corporativo. Frases cortas "
+    "pero completas (sujeto + verbo), nunca fragmentos telegráficos.\n"
     "- Nunca prometas resultados exagerados ni uses superlativos vacíos ('el mejor', 'increíble', "
-    "'revolucionario')."
+    "'revolucionario').\n\n"
+    "GANCHO: 'portada_text' golpea con lo que el negocio ESTÁ PERDIENDO HOY (no lo que podría "
+    "ganar), en segunda persona. Variá el registro: a veces seco y numérico ('Perdés 3 clientes "
+    "por semana sin enterarte'), a veces informal tipo posteo real y frustrado ('Es una locura "
+    "perder ventas por tardar horas en responder'). Límite ético: los números son del caso "
+    "ilustrativo, nunca estadísticas generales inventadas ni amenazas catastróficas.\n\n"
+    "COHERENCIA: la misma unidad de tiempo en toda la pieza (no mezclar 'por semana' con 'al "
+    "mes'), los números tienen que cerrar aritméticamente, las 4 slides son una sola historia "
+    "encadenada (escena del problema -> costo -> qué cambia -> resultado con el mismo número "
+    "del principio), y el demo es el mismo caso del que se viene hablando. 'tiempo_respuesta' "
+    "siempre inmediato (segundos), nunca minutos ni horas.\n\n"
+    "IDIOMA: español rioplatense (Argentina), voseo siempre ('perdés', 'tenés', 'escribime'), "
+    "nunca 'pierdes', 'tienes', 'escríbeme' ni español neutro/de España."
 )
 
 OUTPUT_SCHEMA = {
@@ -98,19 +111,31 @@ OUTPUT_SCHEMA = {
             "type": "string",
             "description": "Texto corto para la slide final de llamado a la acción. Concreto, no genérico.",
         },
+        "cta_final": {
+            "type": "string",
+            "description": "Línea de acción concreta bajo el CTA (ej: 'Escribime y te digo cuánto estás perdiendo'). Máx 9 palabras.",
+        },
+        "swipe_hint": {
+            "type": "string",
+            "description": "En MAYÚSCULAS, máx 5 palabras, invita a seguir mirando el carrusel (ej: 'MIRÁ CÓMO SE RESUELVE'). Sin flechas ni emojis.",
+        },
+        "demo_caption": {
+            "type": "string",
+            "description": "En MAYÚSCULAS, máx 7 palabras, remate debajo del chat del demo (ej: 'RESPONDIÓ ANTES QUE LA COMPETENCIA').",
+        },
         "caption": {
             "type": "string",
             "description": "Caption para TikTok, tono natural (como si lo escribiera una persona real), 2-4 líneas, termina con una pregunta concreta relacionada al demo.",
         },
         "hashtags": {
             "type": "array",
-            "description": "8 a 10 hashtags relevantes sin el símbolo #.",
+            "description": "8 a 10 hashtags relevantes sin el símbolo #, sin espacios, palabras completas y bien escritas.",
             "items": {"type": "string"},
         },
     },
     "required": [
         "negocio_ejemplo", "demo", "portada_text", "slides",
-        "cta_slide_text", "caption", "hashtags",
+        "cta_slide_text", "cta_final", "swipe_hint", "demo_caption", "caption", "hashtags",
     ],
     "additionalProperties": False,
 }

@@ -4,9 +4,9 @@ aprobaciones — ahora también entiende comandos.
 
 Dejalo corriendo (python bot.py) y desde el chat de Telegram mandale:
 
-    /generar                                pieza al azar, modo gratis
-    /generar automatizacion                 pilar puntual, modo gratis
-    /generar automatizacion ollama          pilar + modo (gratis / ollama / ia)
+    /generar                                pieza al azar, modo ollama (IA local, gratis)
+    /generar automatizacion                 pilar puntual
+    /generar automatizacion ia              pilar + modo (ollama / ia)
     /generar automatizacion ollama siempre  + fuerza foto real en los mockups (auto/siempre/nunca)
     /pilares                                lista los pilares disponibles
     /ayuda                                  este mensaje
@@ -39,7 +39,7 @@ from generate import build_piece
 from image_gen import set_photo_bg_chance
 
 ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-MODOS_VALIDOS = ("gratis", "ollama", "ia")
+MODOS_VALIDOS = ("ollama", "ia")
 FONDOS_VALIDOS = {"auto": 0.5, "siempre": 1.0, "nunca": 0.0}
 
 HELP_TEXT = (
