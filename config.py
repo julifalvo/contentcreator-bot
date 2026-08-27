@@ -106,4 +106,21 @@ PILLARS = {
             "Por qué responder rápido importa más que responder perfecto",
         ],
     },
+    # Mismo formato "caso" que los primeros 4 pilares (nada nuevo que programar):
+    # ya exige mostrar la solución funcionando (chat/web/flujo), así que estos
+    # ángulos solo empujan a que ESA parte sea explícitamente un demo/tutorial
+    # paso a paso en vez de quedar como una mención de pasada. Funciona en
+    # carrusel y en video narrado sin cambios, igual que automatizacion/etc.
+    "demos_tutoriales": {
+        "label": "Demos y Tutoriales",
+        "emoji": "🎓",
+        "angle": [
+            "Tutorial paso a paso: así se conecta un agente de IA a WhatsApp Business",
+            "Demo en vivo: así agenda un turno un agente, de punta a punta",
+            "Así responde un agente en la página web de un negocio, paso a paso",
+            "Tutorial: cómo se arma un flujo que carga un pedido solo",
+            "Demo: así consulta un agente el stock real antes de confirmar una venta",
+            "Paso a paso: cómo se automatiza el seguimiento de un cliente que preguntó y no volvió",
+        ],
+    },
 }
