@@ -37,6 +37,7 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -447,6 +448,13 @@ def main() -> None:
     while True:
         try:
             updates = telegram_client.get_updates(offset, timeout=25)
+        except requests.exceptions.ReadTimeout:
+            # Un long polling que vence sin que Telegram conteste no es un
+            # error: pasa seguido con una conexión hogareña y llenaba el log
+            # de "Read timed out" cada 35 segundos. Como el offset no avanzó,
+            # cualquier update pendiente se vuelve a mandar en el próximo
+            # intento — se reintenta al toque y sin ruido.
+            continue
         except Exception as e:
             print(f"Error consultando Telegram: {e}, reintentando en 5s...")
             time.sleep(5)
