@@ -45,6 +45,7 @@ import angulos
 import content_hosting
 import telegram_client
 import tiktok_client
+import tiktok_metrics
 from config import PILLARS
 from generate import PILARES_VIDEO, build_piece, build_video_piece
 
@@ -81,6 +82,8 @@ def _build_help_text() -> str:
         "slides estáticas. No disponible para el pilar humor. Tarda bastante más que un carrusel.\n\n"
         "/publicar — manda a aprobar la última pieza que quedó en output/, sin volver a generarla\n"
         "/pilares — lista de pilares (lo mismo que arriba)\n"
+        "/metricas — seguidores, likes totales y los videos con más vistas de la cuenta (requiere haber "
+        "reautorizado con los scopes user.info.stats y video.list, ver tiktok_metrics.py)\n"
         "/ayuda — este mensaje\n\n"
         "Cómo se aprueba: llega la vista previa (imágenes o video) con botones ✅ Aprobar y publicar / "
         "❌ Cancelar. Solo se sube a TikTok si tocás Aprobar; con Cancelar no se publica nada. "
@@ -236,6 +239,42 @@ def _handle_publicar() -> None:
     _enviar_a_aprobar(folder)
 
 
+def _handle_metricas() -> None:
+    """Trae seguidores/likes totales de la cuenta y los videos con más vistas
+    (Display API, ver tiktok_metrics.py). Falla con un mensaje claro si el
+    token todavía no tiene los scopes user.info.stats/video.list."""
+    try:
+        access_token = tiktok_client.get_access_token()
+        cuenta = tiktok_metrics.get_account_stats(access_token)
+        videos = tiktok_metrics.top_videos(access_token, n=5)
+    except Exception as e:
+        telegram_client.send_message(
+            f"No pude traer las métricas: {e}\n\n"
+            "Si el error dice 'scope_not_authorized', hace falta habilitar 'user.info.stats' "
+            "y 'video.list' en developers.tiktok.com → tu app → Login Kit → Scopes, y después "
+            "correr 'python tiktok_auth.py' de nuevo para reautorizar con esos scopes."
+        )
+        return
+
+    lineas = [
+        f"📊 {cuenta.get('display_name', '')}",
+        f"Seguidores: {cuenta.get('follower_count', '?')} · Likes totales: {cuenta.get('likes_count', '?')} · "
+        f"Videos: {cuenta.get('video_count', '?')}",
+        "",
+        "Top 5 por vistas:",
+    ]
+    if not videos:
+        lineas.append("(todavía no hay videos publicados en la cuenta)")
+    for v in videos:
+        desc = (v.get("video_description") or "").strip()
+        desc = (desc[:57] + "...") if len(desc) > 60 else (desc or "(sin descripción)")
+        lineas.append(
+            f"- {v.get('view_count', '?')} vistas · {v.get('like_count', '?')} likes · "
+            f"{v.get('comment_count', '?')} coment. · {v.get('share_count', '?')} compartidos — {desc}"
+        )
+    telegram_client.send_message("\n".join(lineas))
+
+
 def _handle_wizard_callback(cq: dict) -> None:
     global _wizard
     telegram_client.answer_callback(cq["id"])
@@ -378,6 +417,8 @@ def _handle_message(message: dict) -> None:
         _handle_generar(text.split()[1:])
     elif text.startswith("/pilares"):
         telegram_client.send_message(_pilares_listado())
+    elif text.startswith("/metricas"):
+        _handle_metricas()
     elif text.startswith("/ayuda") or text.startswith("/start"):
         telegram_client.send_message(HELP_TEXT)
 

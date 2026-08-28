@@ -69,10 +69,17 @@ def main() -> None:
     challenge = _code_challenge(verifier)
     state = _random_string(24)
 
+    # video.upload: publicar (el que ya se usaba). user.info.stats/video.list:
+    # sólo lectura, para traer métricas reales (tiktok_metrics.py) — seguidores,
+    # likes totales y vistas/likes/comentarios por video ya publicado. Hace
+    # falta habilitar esos dos scopes en developers.tiktok.com → tu app →
+    # Login Kit → Scopes ANTES de correr este script, o TikTok rechaza el
+    # login con un scope que la app no tiene habilitado.
+    scopes = os.environ.get("TIKTOK_SCOPES", "video.upload,user.info.basic,user.info.stats,video.list")
     params = {
         "client_key": client_key,
         "response_type": "code",
-        "scope": "video.upload",
+        "scope": scopes,
         "redirect_uri": redirect_uri,
         "state": state,
         "code_challenge": challenge,
