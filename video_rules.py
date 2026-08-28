@@ -14,7 +14,7 @@ import content_rules
 
 SYSTEM_PROMPT_VIDEO = """Escribís el guion de un video narrado para TikTok para rootbusinessai, una agencia que construye agentes de IA y automatizaciones para negocios chicos de Argentina. Contás casos reales de clientes, no vendés un curso.
 
-FORMATO: video vertical con VOZ EN OFF real (locución de IA) sobre b-roll de video de stock, más texto corto en pantalla en algunas escenas. A diferencia del carrusel de imágenes, acá SÍ hay narración hablada — escribís para que se lea en voz alta, no para que se lea en una slide.
+FORMATO: video vertical con VOZ EN OFF real (locución de IA) sobre b-roll de video de stock, sin texto en pantalla. A diferencia del carrusel de imágenes, acá SÍ hay narración hablada — escribís para que se lea en voz alta, no para que se lea en una slide.
 
 CÓMO TRABAJÁS (en este orden, no lo saltees):
 1. Elegís un rubro concreto y UN DETALLE ANCLA bien puntual, igual que harías para un carrusel: no "los mensajes", sino "los mensajes que entran entre las 21 y las 8".
@@ -23,7 +23,6 @@ CÓMO TRABAJÁS (en este orden, no lo saltees):
 
 REGLAS DE LOCUCIÓN (importante, es lo que más cambia respecto del carrusel):
 - "narracion" se escribe para ser LEÍDA EN VOZ ALTA por una IA de texto a voz: frases cortas, ritmo conversacional, sin abreviaturas ni símbolos raros ($ y % se escriben en palabras: "cuatro mil pesos", no "$4000"; "el treinta por ciento", no "30%"). Nada de emojis ni texto que solo tiene sentido escrito.
-- "on_screen" es OPCIONAL: un texto corto (máx 6 palabras) que refuerza visualmente el punto de esa escena — no repite la narración palabra por palabra, la resume. Dejalo vacío ("") si la escena no lo necesita.
 - "b_roll" es una búsqueda EN INGLÉS para un banco de video de stock (Pexels): describí una escena genérica y realista que un banco de stock probablemente tenga (ej: "woman checking phone smiling", "small shop owner behind counter", "hands typing on laptop"), NUNCA algo hiper-específico que no vas a encontrar (nada de nombres de negocios, marcas, ni "veterinaria argentina con letrero en español").
 
 REGLAS DE HILO Y NÚMEROS (igual que en el carrusel):
@@ -49,7 +48,7 @@ ESTRUCTURA: entre 5 y 7 escenas. La primera es el gancho (en segunda persona, lo
 HASHTAGS — máximo 5 (regla dura): priorizá los más usados en negocios/tecnología/IA en español (negocios, pymes, tecnologia, ia, automatizacion, emprendedores, innovacion, negociodigital).
 
 RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
-{"negocio":"...","ancla":"...","historia":"...","escenas":[{"narracion":"...","on_screen":"...","b_roll":"..."}],"caption":"2-4 líneas en tercera persona, sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["máximo 5, sin #, una palabra cada uno"]}"""
+{"negocio":"...","ancla":"...","historia":"...","escenas":[{"narracion":"...","b_roll":"..."}],"caption":"2-4 líneas en tercera persona, sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["máximo 5, sin #, una palabra cada uno"]}"""
 
 
 def validate(data: dict) -> None:
@@ -62,7 +61,7 @@ def validate(data: dict) -> None:
         raise ValueError(f"Se esperaban entre 5 y 7 escenas, llegaron {len(escenas)}")
 
     for i, s in enumerate(escenas):
-        faltan = {"narracion", "on_screen", "b_roll"} - s.keys()
+        faltan = {"narracion", "b_roll"} - s.keys()
         if faltan:
             raise ValueError(f"A la escena {i + 1} le faltan campos: {faltan}")
         if not s.get("narracion", "").strip():
@@ -78,7 +77,6 @@ def validate(data: dict) -> None:
     texto = " ".join(
         [data.get("caption", ""), data.get("historia", "")]
         + [s.get("narracion", "") for s in escenas]
-        + [s.get("on_screen", "") for s in escenas]
     ).lower()
 
     vendedor = [f for f in content_rules.TONO_VENDEDOR if f in texto]

@@ -1,8 +1,8 @@
 """Arma el video narrado final: por cada escena de video_rules.py, baja un
-clip de b-roll de Pexels, sintetiza la locución con ElevenLabs, recorta el
-clip a la duración exacta de esa locución y le quema el texto en pantalla
-(si tiene). Al final concatena todas las escenas y mezcla la narración
-completa con música de fondo baja (opcional, reusa music/ como video_gen.py).
+clip de b-roll de Pexels, sintetiza la locución con ElevenLabs y recorta el
+clip a la duración exacta de esa locución. Al final concatena todas las
+escenas y mezcla la narración completa con música de fondo baja (opcional,
+reusa music/ como video_gen.py).
 
 Todo con ffmpeg (vía imageio_ffmpeg, el mismo binario que ya usa video_gen.py
 para el carrusel-en-video) y llamadas separadas por escena en vez de un único
@@ -21,7 +21,6 @@ import pexels_client
 from video_gen import pick_music
 
 CANVAS_W, CANVAS_H = 1080, 1920
-FONT_PATH = Path(__file__).parent / "assets" / "fonts" / "Inter-Regular.ttf"
 MUSICA_FONDO_VOLUMEN = 0.12  # baja de más: la narración tiene que ganarle siempre
 
 
@@ -41,34 +40,8 @@ def _duracion_segundos(path: Path) -> float:
     return int(h) * 3600 + int(m) * 60 + float(s)
 
 
-def _escapar_drawtext(texto: str) -> str:
-    """Escapa lo mínimo indispensable para el mini-lenguaje de filtros de
-    ffmpeg. La comilla simple se reemplaza en vez de escaparse: escapar
-    comillas dentro de un string ya envuelto en comillas simples es
-    notoriamente frágil entre versiones de ffmpeg, y una comilla tipográfica
-    se ve igual de bien en el texto en pantalla."""
-    texto = texto.replace("\\", "\\\\")
-    texto = texto.replace(":", "\\:")
-    texto = texto.replace("'", "’")
-    texto = texto.replace("%", "\\%")
-    return texto
-
-
-def _armar_escena(bg_path: Path, duracion: float, on_screen: str, out_path: Path) -> None:
+def _armar_escena(bg_path: Path, duracion: float, out_path: Path) -> None:
     vf = f"scale={CANVAS_W}:{CANVAS_H}:force_original_aspect_ratio=increase,crop={CANVAS_W}:{CANVAS_H}"
-    if on_screen and on_screen.strip():
-        texto = _escapar_drawtext(on_screen.strip())
-        # En Windows, 'M:/...' tiene un ':' de letra de unidad que choca con
-        # el ':' que ffmpeg usa como separador de opciones dentro de un
-        # filtro — hay que escaparlo igual que el resto de la puntuación.
-        fontfile = FONT_PATH.as_posix().replace(":", "\\:")
-        # Estilo nativo de TikTok: texto blanco con borde negro fino, sin caja
-        # de fondo (la caja se veía como un cartel pegado encima del video).
-        vf += (
-            f",drawtext=fontfile='{fontfile}':text='{texto}':"
-            "fontsize=68:fontcolor=white:borderw=6:bordercolor=black:"
-            "x=(w-text_w)/2:y=h-360"
-        )
     cmd = [
         _ffmpeg(), "-y",
         "-stream_loop", "-1", "-i", str(bg_path),
@@ -76,7 +49,7 @@ def _armar_escena(bg_path: Path, duracion: float, on_screen: str, out_path: Path
         "-vf", vf,
         "-an",
         "-r", "30",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
         str(out_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -122,7 +95,7 @@ def build_video(folder: Path, data: dict, out_name: str = "video.mp4") -> Path:
         pexels_client.descargar_clip(esc["b_roll"], bg_path)
 
         clip_path = tmp / f"{i:02d}_clip.mp4"
-        _armar_escena(bg_path, duracion, esc.get("on_screen", ""), clip_path)
+        _armar_escena(bg_path, duracion, clip_path)
 
         clips_video.append(clip_path)
         clips_audio.append(voz_path)
