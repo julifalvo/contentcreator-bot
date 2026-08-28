@@ -53,6 +53,8 @@ def build_video(folder: Path, out_name: str = "video.mp4") -> Path:
         "-vf", "scale=1080:1920,format=yuv420p",
         "-r", "30",
         "-c:v", "libx264",
+        "-preset", "slow",
+        "-crf", "18",
         "-pix_fmt", "yuv420p",
     ]
     if music:

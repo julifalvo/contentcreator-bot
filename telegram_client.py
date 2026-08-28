@@ -45,14 +45,18 @@ def _call(method: str, **kwargs) -> dict:
     # más corriendo en paralelo mientras se manda la vista previa).
     #
     # Un corte de conexión (ConnectionResetError, wifi que titubea, etc.) es
-    # transitorio y reintentar casi siempre alcanza — pasó de verdad una vez
-    # y tiró abajo el paso del wizard con un traceback en vez de reintentar
-    # solo. Con archivos (fotos/video) NO reintentamos: si la conexión se
-    # cortó a mitad de subida, el file handle ya se consumió en parte y un
-    # reintento ciego mandaría un archivo corrupto/vacío.
-    intentos = 1 if "files" in kwargs else 3
+    # transitorio y reintentar casi siempre alcanza. Con archivos (fotos/
+    # video) el reintento es seguro porque son archivos reales en disco, no
+    # streams de un solo uso: rebobinarlos (seek(0)) antes de cada intento
+    # alcanza para que 'requests' los vuelva a leer desde el principio en
+    # vez de mandar algo corrupto/vacío.
+    archivos = kwargs.get("files")
+    intentos = 3
     ultimo_error: Exception | None = None
     for intento in range(1, intentos + 1):
+        if archivos and intento > 1:
+            for _, fh, *_resto in archivos.values():
+                fh.seek(0)
         try:
             resp = requests.post(url, timeout=120, **kwargs)
             resp.raise_for_status()
@@ -96,6 +100,12 @@ def _mandar_botones_aprobar() -> int:
 def send_preview(images: list[Path], caption: str) -> int:
     """Manda las imágenes como álbum y un mensaje con botones Aprobar/Cancelar.
 
+    Se mandan como 'document' en vez de 'photo': Telegram recomprime a JPEG
+    (con su propio nivel de calidad) todo lo que llega como 'photo' en un
+    álbum, lo que se nota como pérdida de nitidez en el texto. Como
+    'document' viaja el archivo tal cual, byte a byte, y Telegram igual lo
+    muestra como miniatura de imagen dentro del álbum.
+
     Devuelve el message_id del mensaje con los botones, para poder identificar
     la respuesta en wait_for_approval().
     """
@@ -105,12 +115,12 @@ def send_preview(images: list[Path], caption: str) -> int:
         media = []
         files = {}
         open_files = []
-        for i, img in enumerate(images[:10]):  # Telegram permite hasta 10 fotos por álbum
+        for i, img in enumerate(images[:10]):  # Telegram permite hasta 10 archivos por álbum
             key = f"photo{i}"
             fh = img.open("rb")
             open_files.append(fh)
             files[key] = (img.name, fh, "image/png")
-            item = {"type": "photo", "media": f"attach://{key}"}
+            item = {"type": "document", "media": f"attach://{key}"}
             if i == 0:
                 item["caption"] = caption[:1024]
             media.append(item)

@@ -100,11 +100,13 @@ def html_to_png(html: str, out_path: Path) -> Path:
 
 
 def _recomprimir(path: Path) -> None:
-    """Chrome guarda el screenshot como PNG sin optimizar: ~1.7MB por slide,
-    contra los ~50-90KB que salían dibujando con Pillow. Con 6-8 slides eso
-    tira abajo el envío del carrusel a Telegram por timeout. Estas piezas son
-    texto + colores planos + degradés suaves (nunca fotos con ruido real), así
-    que una paleta de 256 colores no se nota y pesa una fracción."""
+    """Chrome guarda el screenshot como PNG sin optimizar: ~500KB-1MB por
+    slide. Antes se cuantizaba a paleta de 256 colores para bajar eso a
+    ~150-200KB, pero esa pieza queda tal cual como fuente para el JPEG que
+    sube a TikTok (content_hosting.py) y para la vista previa de Telegram —
+    256 colores mete banding visible en degradés y sobre todo en las fotos
+    reales (slide tipo 'foto'), que dejan de verse HD. La recompresión
+    lossless (mismo color verdadero, solo re-empaqueta los bytes con zlib al
+    máximo) evita eso y sigue pesando una fracción de lo que tira Chrome."""
     img = Image.open(path).convert("RGB")
-    img = img.quantize(colors=256, method=Image.MEDIANCUT, dither=Image.FLOYDSTEINBERG)
-    img.save(path, "PNG", optimize=True)
+    img.save(path, "PNG", optimize=True, compress_level=9)
