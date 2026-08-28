@@ -59,5 +59,13 @@ def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False) -> dict
     return _con_fallback("generate_sabias_que", pilar, angulo, con_foto)
 
 
+def generate_chisme(pilar: str, angulo: str) -> dict:
+    return _con_fallback("generate_chisme", pilar, angulo)
+
+
 def generate_video_script(pilar: str, angulo: str, rubro: str) -> dict:
     return _con_fallback("generate_video_script", pilar, angulo, rubro)
+
+
+def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int) -> dict:
+    return _con_fallback("generate_angulos", pilar, formato, existentes, n)

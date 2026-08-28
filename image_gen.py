@@ -23,10 +23,12 @@ MAX_INTENTOS = 3
 _TIMEOUTS = (40, 70, 90)
 
 
-def fetch_image_data_uri(prompt: str, seed: int | None = None) -> str:
+def fetch_image_data_uri(prompt: str, seed: int | None = None, width: int = WIDTH, height: int = HEIGHT) -> str:
     """Pide una imagen a Pollinations y la devuelve como data URI lista para
-    un <img src="...">. Tira RuntimeError si los reintentos se agotan."""
-    params = {"width": WIDTH, "height": HEIGHT, "nologo": "true"}
+    un <img src="...">. width/height por default dan la foto vertical de las
+    slides tipo 'foto'; los íconos pixel art de las slides tipo 'item' piden
+    un cuadrado más chico. Tira RuntimeError si los reintentos se agotan."""
+    params = {"width": width, "height": height, "nologo": "true"}
     if seed is not None:
         params["seed"] = seed
     url = BASE_URL.format(urllib.parse.quote(prompt, safe=""))

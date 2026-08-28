@@ -88,12 +88,17 @@ body::before {{
   background-size:5px 5px;
 }}
 .page {{
-  position:absolute; inset:0; padding:170px 100px 270px;
+  position:absolute; inset:0; padding:190px 150px 300px;
   display:flex; flex-direction:column;
 }}
 /* Zona segura de TikTok: la UI propia de la app (usuario, caption, botones de
    like/comentario, música) tapa ~150px arriba y ~250px abajo del posteo. El
-   @handle y el folio quedan dentro de esa franja tapada si no se los sube. */
+   @handle y el folio quedan dentro de esa franja tapada si no se los sube.
+   Además, el canvas es 1080x1920 (9:16) pero la mayoría de las pantallas son
+   más altas (19.5:9, 20:9 y similares): TikTok escala la imagen a pantalla
+   completa ("cover") y eso recorta hasta ~120-140px de CADA lado en los
+   celulares más extremos — por eso el margen lateral es bastante más generoso
+   que un margen puramente estético. */
 /* El contenido se centra verticalmente y ocupa el alto disponible entre el
    encabezado y el pie. Si se deja arriba con un spacer abajo, queda medio
    lienzo vacío y la pieza se ve incompleta. */
@@ -287,6 +292,18 @@ h2 {{
 .compare-col.is-chatbot .compare-item {{ color:{p['dim']}; }}
 .compare-col.is-agente .compare-item {{ color:#FFF9F2; }}
 .compare-mark {{ flex:none; font-weight:700; }}
+/* --- Ítem (formato 'chisme'): ícono pixel art generado por IA + texto --- */
+.item-card {{ display:flex; flex-direction:column; align-items:center; text-align:center; }}
+.item-icon-frame {{
+  width:420px; height:420px; border-radius:32px; overflow:hidden; flex:none;
+  background:{p['bg2']}; border:1px solid {p['rule']};
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 30px 70px rgba(28,23,20,.16);
+  margin-bottom:56px;
+}}
+.item-icon-frame img {{ width:80%; height:80%; object-fit:contain; }}
+.item-nombre {{ font-family:'Display', serif; font-weight:800; font-size:88px; line-height:1.05; }}
+.item-detalle {{ font-size:38px; line-height:1.5; color:{p['dim']}; margin-top:28px; max-width:88%; }}
 """
 
 
@@ -321,9 +338,27 @@ def _portada(s: dict, p: dict) -> str:
     return f"""<div><h1>{html.escape(s['titular'])}</h1>{epi}</div>"""
 
 
+def _stat_font_size(numero: str) -> int:
+    """El tamaño base (330px) de .stat-num solo entra sin desbordar el canvas
+    con números cortos (2-3 caracteres, "87%", "3x"). La IA a veces devuelve
+    números más largos ("1.200%", "0,002") que a 330px se salen del margen
+    lateral — se achica según la cantidad de caracteres en vez de dejarlo fijo."""
+    n = len(numero)
+    if n <= 3:
+        return 330
+    if n == 4:
+        return 270
+    if n == 5:
+        return 230
+    if n == 6:
+        return 190
+    return 160
+
+
 def _dato(s: dict, p: dict) -> str:
+    size = _stat_font_size(s["numero"])
     return f"""<div class="stat">
-<div class="stat-num">{html.escape(s['numero'])}</div>
+<div class="stat-num" style="font-size:{size}px">{html.escape(s['numero'])}</div>
 <div class="stat-unit">{html.escape(s['unidad'])}</div>
 <div class="hair" style="margin:52px 0 44px"></div>
 <div class="body-l" style="max-width:82%">{html.escape(s['detalle'])}</div></div>"""
@@ -465,6 +500,18 @@ def _comparacion(s: dict, p: dict) -> str:
 </div></div>"""
 
 
+def _item(s: dict, p: dict) -> str:
+    """Slide 'item' (formato 'chisme'): un ícono pixel art generado por IA
+    (vía image_gen.py, agregado por generate.py en '_img_data_uri' igual que
+    la slide 'foto') más el nombre del ítem y el comentario gracioso."""
+    img = s.get("_img_data_uri", "")
+    return f"""<div class="item-card">
+<div class="item-icon-frame"><img src="{img}" alt=""></div>
+<h2 class="item-nombre">{html.escape(s['nombre'])}</h2>
+<div class="item-detalle">{html.escape(s['detalle'])}</div>
+</div>"""
+
+
 BUILDERS = {
     "portada": (_portada, {"titular"}),
     "dato": (_dato, {"numero", "unidad", "detalle"}),
@@ -476,6 +523,7 @@ BUILDERS = {
     "foto": (_foto, {"titular", "prompt_imagen"}),
     "codigo": (_codigo, {"titular", "codigo"}),
     "comparacion": (_comparacion, {"titular", "chatbot", "agente"}),
+    "item": (_item, {"nombre", "detalle", "icono_prompt"}),
     "cierre": (_cierre, {"titular", "accion"}),
 }
 

@@ -168,6 +168,87 @@ def get_sabias_que_system_prompt(con_foto: bool = False) -> str:
     )
 
 
+# Guía de estilo por formato para generar ÁNGULOS nuevos (angulos.py /
+# refrescar_angulos.py): reemplaza las listas que antes vivían hardcodeadas
+# en config.py — acá se define qué hace bueno a un ángulo de CADA formato,
+# para que la IA que los inventa mantenga el mismo nivel de puntualidad que
+# los ángulos escritos a mano originalmente.
+_ANGULOS_ESTILO = {
+    None: (  # formato "caso" (default: automatizacion, eficiencia_comercial, etc.)
+        "Estos ángulos son para piezas de CASO: una agencia cuenta en tercera persona la historia de un "
+        "cliente. Cada ángulo es UNA frase corta, casi siempre arrancando con 'Cómo...', que describe una "
+        "mecánica bien puntual — un detalle ancla concreto, nunca un tema genérico: no 'cómo mejorar la "
+        "atención al cliente', sino 'cómo automatizar el recordatorio de turnos para bajar los faltazos'. "
+        "Tiene que sonar a algo específico que un agente de IA resuelve de verdad, no una promesa vaga."
+    ),
+    "humor": (
+        "Estos ángulos son para piezas de HUMOR: una situación cotidiana reconocible, en segunda persona, "
+        "sin caso de cliente. Cada ángulo describe una escena puntual y un poco exagerada (pero verosímil) "
+        "de la vida de un dueño de negocio chico: no 'el estrés de atender clientes', sino 'los estados de "
+        "tu WhatsApp de negocio en un día cualquiera'. Tiene que sonar reconocible al toque, no un chiste genérico."
+    ),
+    "sabias_que": (
+        "Estos ángulos son para piezas educativas '¿Sabías que...?': un dato o concepto, sin caso de cliente "
+        "ni solución puntual. Cada ángulo es un dato o concepto concreto e interesante sobre automatización, "
+        "IA o negocios chicos: no 'la importancia de la IA', sino 'por qué la mayoría de las consultas por "
+        "WhatsApp llegan fuera del horario de atención'."
+    ),
+    "chisme": (
+        "Estos ángulos son para piezas de puro fun content, tipo ranking/lista graciosa: sin caso de cliente "
+        "ni pitch de la agencia. Cada ángulo es UN CONCEPTO de lista que mezcla el mundo IA/tech con "
+        "costumbres argentinas — no 'la tecnología en Argentina', sino 'Esenciales 2026 para sobrevivir al "
+        "mundo IA (con mate incluido)' o 'Cosas que todo founder argento tiene abiertas en 47 pestañas'. "
+        "Tiene que sonar a un título de lista con gancho propio, no un tema genérico."
+    ),
+}
+
+
+def get_angulos_system_prompt(formato: str | None) -> str:
+    estilo = _ANGULOS_ESTILO.get(formato, _ANGULOS_ESTILO[None])
+    return f"""Generás ÁNGULOS nuevos para rootbusinessai, una agencia que construye agentes de IA y automatizaciones para negocios chicos de Argentina. Un ángulo es la semilla puntual de UNA pieza de contenido para TikTok — no el texto final, solo la idea concreta que después otra IA desarrolla en un carrusel o video completo.
+
+{estilo}
+
+REGLAS:
+- Cada ángulo es UNA sola oración, sin numerarla, sin guion ni comillas alrededor.
+- Específico y accionable: si dos ángulos de tu respuesta podrían intercambiarse sin que se note, están mal.
+- Castellano rioplatense (son descripciones que no le hablan directo a nadie, no hace falta voseo explícito).
+- PROHIBIDO repetir o parafrasear cualquiera de los ángulos "ya existentes" que te paso en el mensaje: tienen que ser ideas realmente nuevas, no variaciones de las mismas.
+- Nada de lenguaje de marketing vacío (revolucioná, solución integral, en la era digital).
+
+RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
+{{"angulos": ["...", "..."]}}"""
+
+
+def validate_angulos(data: dict, n_pedidos: int) -> None:
+    """Valida la respuesta de generate_angulos: limpia duplicados exactos
+    (case-insensitive) in-place en data['angulos'] y exige que haya quedado
+    al menos la mitad de lo pedido — no vale la pena rechazar y reintentar
+    solo porque el modelo repitió un par."""
+    angulos_lista = data.get("angulos")
+    if not isinstance(angulos_lista, list) or not angulos_lista:
+        raise ValueError("Falta 'angulos' o vino vacío")
+
+    limpios = []
+    vistos = set()
+    for a in angulos_lista:
+        if not isinstance(a, str):
+            raise ValueError(f"Ángulo inválido (no es texto): {a!r}")
+        a = a.strip()
+        if len(a.split()) < 4:
+            raise ValueError(f"Ángulo demasiado corto: {a!r}")
+        clave = a.lower()
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        limpios.append(a)
+
+    minimo = max(1, n_pedidos // 2)
+    if len(limpios) < minimo:
+        raise ValueError(f"Vinieron muy pocos ángulos únicos ({len(limpios)} de {n_pedidos} pedidos)")
+    data["angulos"] = limpios
+
+
 # Frases que delatan que el modelo se puso en modo vendedor de SaaS en vez de
 # contar el caso. Se chequean sobre todo el texto de la pieza.
 _TONO_VENDEDOR = (
@@ -233,7 +314,7 @@ _IMPERATIVOS = [
 ]
 
 
-_CAMPOS_EN_INGLES = {"prompt_imagen", "b_roll"}
+_CAMPOS_EN_INGLES = {"prompt_imagen", "b_roll", "icono_prompt"}
 
 
 def normalizar(valor):

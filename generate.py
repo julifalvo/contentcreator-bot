@@ -28,18 +28,19 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
+import angulos
 import design
 import image_gen
 import render
 import video_narrado
-from ai_providers import generate_carousel, generate_humor, generate_sabias_que, generate_video_script
+from ai_providers import generate_carousel, generate_chisme, generate_humor, generate_sabias_que, generate_video_script
 from config import PILLARS, RUBROS
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 # Pilares cuyo formato NO es el caso de cliente en tercera persona (llevan
 # "tema" en vez de "negocio"/"ancla"/"historia" en el JSON que devuelve la IA).
-_FORMATOS_SIN_CASO = {"humor", "sabias_que"}
+_FORMATOS_SIN_CASO = {"humor", "sabias_que", "chisme"}
 
 # El formato 'video narrado' (voz de ElevenLabs + b-roll de Pexels, ver
 # video_rules.py) todavía es solo para el caso serio de cliente en tercera
@@ -53,7 +54,7 @@ def slugify(text: str) -> str:
 
 def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = False) -> Path:
     pillar = PILLARS[pillar_key]
-    angulo = angulo or random.choice(pillar["angle"])
+    angulo = angulo or angulos.elegir_angulo(pillar_key)
     palette = design.pick_palette()
     formato = pillar.get("formato", "caso")
     sin_caso = formato in _FORMATOS_SIN_CASO
@@ -63,6 +64,8 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
         data = generate_humor(pillar["label"], angulo, con_foto)
     elif formato == "sabias_que":
         data = generate_sabias_que(pillar["label"], angulo, con_foto)
+    elif formato == "chisme":
+        data = generate_chisme(pillar["label"], angulo)
     else:
         rubro = random.choice(RUBROS)
         print(f"  Rubro: {rubro}")
@@ -78,6 +81,14 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
         if slide.get("tipo") == "foto":
             print(f"  Generando imagen: {slide['prompt_imagen'][:70]}...")
             slide["_img_data_uri"] = image_gen.fetch_image_data_uri(slide["prompt_imagen"])
+        elif slide.get("tipo") == "item":
+            print(f"  Generando ícono pixel art: {slide['icono_prompt'][:70]}...")
+            icon_prompt = (
+                f"pixel art icon of {slide['icono_prompt']}, 8-bit retro video game style, "
+                "vibrant colors, centered single object, flat plain background, no text, "
+                "no watermark, no logo"
+            )
+            slide["_img_data_uri"] = image_gen.fetch_image_data_uri(icon_prompt, width=700, height=700)
 
     print(f"  Renderizando {len(slides)} slides ({palette['name']})...")
     for i, slide in enumerate(slides, 1):
@@ -142,7 +153,7 @@ def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
         raise ValueError(f"El pilar '{pillar_key}' no soporta el formato video (solo: {PILARES_VIDEO})")
 
     pillar = PILLARS[pillar_key]
-    angulo = angulo or random.choice(pillar["angle"])
+    angulo = angulo or angulos.elegir_angulo(pillar_key)
     rubro = random.choice(RUBROS)
 
     print(f"→ [video] {pillar['label']} — {angulo}")
@@ -151,8 +162,7 @@ def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
     print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    titular = data["escenas"][0].get("on_screen") or data["negocio"]
-    folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_video_{slugify(titular)}"
+    folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_video_{slugify(data['negocio'])}"
     folder.mkdir(parents=True, exist_ok=True)
 
     print(f"  Armando video ({len(data['escenas'])} escenas: locución + b-roll)...")
@@ -161,7 +171,6 @@ def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
     hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
     guion = "\n\n".join(
         f"Escena {i}: {e['narracion']}"
-        + (f"\n  (en pantalla: {e['on_screen']})" if e.get("on_screen") else "")
         + f"\n  (b-roll: {e['b_roll']})"
         for i, e in enumerate(data["escenas"], 1)
     )

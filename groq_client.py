@@ -17,6 +17,7 @@ import time
 import requests
 from dotenv import load_dotenv
 
+import chisme_rules
 import content_rules
 import video_rules
 
@@ -184,6 +185,59 @@ def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False) -> dict
             print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
 
     raise RuntimeError(f"Groq no devolvió un carrusel 'sabías que' válido tras {MAX_RETRIES} intentos: {last_error}")
+
+
+def generate_chisme(pilar: str, angulo: str) -> dict:
+    """Pide a Groq un carrusel de puro fun content (formato 'chisme': ranking/
+    lista graciosa que mezcla IA/tech con costumbres argentinas, con ícono
+    pixel art por ítem). Costo: $0 (free tier)."""
+    user = (
+        f"Pilar: {pilar}.\n"
+        f"Concepto de la lista/ranking: {angulo}\n\n"
+        "Armá el carrusel siguiendo tu método: elegí entre 3 y 6 ítems para ESE "
+        "concepto, con su nombre, comentario gracioso e icono_prompt cada uno."
+    )
+
+    last_error: Exception | None = None
+    for intento in range(1, MAX_RETRIES + 1):
+        resp = _post_con_espera(chisme_rules.SYSTEM_PROMPT_CHISME, user)
+        raw = resp.json()["choices"][0]["message"]["content"]
+        try:
+            data = content_rules.normalizar(json.loads(raw))
+            chisme_rules.validate(data)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
+
+    raise RuntimeError(f"Groq no devolvió un carrusel 'chisme' válido tras {MAX_RETRIES} intentos: {last_error}")
+
+
+def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int) -> dict:
+    """Pide a Groq `n` ángulos nuevos para `pilar`, evitando repetir
+    `existentes`. Usado por refrescar_angulos.py para ampliar el pool sin
+    tocar código. Costo: $0 (free tier)."""
+    lista_existentes = "\n".join(f"- {a}" for a in existentes) or "(ninguno todavía)"
+    user = (
+        f"Pilar: {pilar}.\n\n"
+        f"Ángulos ya existentes (no los repitas ni los parafrasees):\n{lista_existentes}\n\n"
+        f"Generá {n} ángulos nuevos."
+    )
+    system = content_rules.get_angulos_system_prompt(formato)
+
+    last_error: Exception | None = None
+    for intento in range(1, MAX_RETRIES + 1):
+        resp = _post_con_espera(system, user)
+        raw = resp.json()["choices"][0]["message"]["content"]
+        try:
+            data = content_rules.normalizar(json.loads(raw))
+            content_rules.validate_angulos(data, n)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
+
+    raise RuntimeError(f"Groq no devolvió ángulos válidos tras {MAX_RETRIES} intentos: {last_error}")
 
 
 def generate_video_script(pilar: str, angulo: str, rubro: str) -> dict:

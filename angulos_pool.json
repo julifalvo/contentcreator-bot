@@ -1,0 +1,75 @@
+{
+  "automatizacion": [
+    "Cómo un agente de WhatsApp carga pedidos automáticamente sin que nadie tipee nada",
+    "Cómo automatizar el recordatorio de turnos para bajar los faltazos",
+    "Cómo un bot avisa cuando se está por agotar el stock de un producto",
+    "Cómo automatizar el armado de un pedido a partir de un audio de voz",
+    "Cómo eliminar las respuestas repetidas a la misma pregunta de siempre",
+    "Cómo automatizar el alta de un cliente nuevo sin cargar datos a mano"
+  ],
+  "eficiencia_comercial": [
+    "Cómo un agente responde leads al instante para no perder ventas por tardar",
+    "Cómo cotizar automáticamente sin que el cliente espere horas",
+    "Cómo reservar turnos por WhatsApp sin que se pisen los horarios",
+    "Cómo un agente distingue una urgencia real de una consulta común",
+    "Cómo recuperar a un cliente que preguntó precio y no volvió a escribir",
+    "Cómo cerrar una venta por chat sin que un vendedor esté siempre online"
+  ],
+  "optimizacion_operativa": [
+    "Cómo automatizar el cobro de cuotas mensuales sin perseguir a nadie",
+    "Cómo cubrir automáticamente un turno cancelado con la lista de espera",
+    "Cómo controlar el stock de un negocio sin revisar todo a ojo",
+    "Cómo ordenar la agenda de un negocio que antes vivía en un cuaderno",
+    "Cómo evitar que un insumo se termine sin que nadie lo note",
+    "Cómo automatizar el armado de fichas o legajos de clientes nuevos"
+  ],
+  "transformacion": [
+    "Cómo un negocio de toda la vida empieza a vender también por WhatsApp",
+    "Cómo pasar de un cuaderno de turnos a un agente que agenda solo",
+    "Cómo un local que dependía solo del mostrador suma un canal digital",
+    "Cómo modernizar la atención al cliente sin cambiar todo el negocio",
+    "Cómo un negocio chico compite con cadenas más grandes usando IA",
+    "Cómo digitalizar un proceso interno sin gastar en sistemas caros"
+  ],
+  "humor": [
+    "Los estados de tu WhatsApp de negocio en un día cualquiera",
+    "El ranking de mensajes que te llegan a las 3 de la mañana",
+    "Lo que pensás mientras contestás la misma pregunta por décima vez en la semana",
+    "La cara que pone un cliente cuando le contestás 6 horas después",
+    "Un día típico atendiendo el mostrador y el WhatsApp al mismo tiempo",
+    "Las excusas que te decís todos los meses para no automatizar todavía"
+  ],
+  "sabias_que": [
+    "Cuánto tiempo pierde en promedio un negocio chico respondiendo siempre lo mismo por WhatsApp",
+    "Qué es en criollo un agente de IA (sin la jerga técnica)",
+    "Por qué la mayoría de las consultas por WhatsApp llegan fuera del horario de atención",
+    "Qué diferencia a un chatbot de un agente de IA de verdad",
+    "Cuánto cuesta hoy automatizar algo chico en un negocio, en plata real",
+    "Por qué responder rápido importa más que responder perfecto"
+  ],
+  "demos_tutoriales": [
+    "Tutorial paso a paso: así se conecta un agente de IA a WhatsApp Business",
+    "Demo en vivo: así agenda un turno un agente, de punta a punta",
+    "Así responde un agente en la página web de un negocio, paso a paso",
+    "Tutorial: cómo se arma un flujo que carga un pedido solo",
+    "Demo: así consulta un agente el stock real antes de confirmar una venta",
+    "Paso a paso: cómo se automatiza el seguimiento de un cliente que preguntó y no volvió"
+  ],
+  "chisme": [
+    "Los trucos de IA que todo mateador digital necesita para no perder la charla",
+    "Las excusas de IA que suenan más a choripán que a código",
+    "Los emojis que los bots argentinos usan para describir la sobremesa",
+    "Las apps de IA que hacen que el asado sea más rápido que el fuego",
+    "Los errores de IA que suenan a “¡Olvidé la factura del gas!”",
+    "Las playlists de IA para programar mientras esperás el colectivo",
+    "Los memes de IA que todo porteño comparte en la oficina de coworking",
+    "Las frases de IA que suenan a “¿Viste el partido?”",
+    "Los filtros de IA que convierten a tu perro en un pibe de la city",
+    "Las IA que hacen que la factura del internet sea más ligera que una milanesa",
+    "Los comandos de voz que hacen que el robot limpie la cocina como la abuela",
+    "Las notificaciones de IA que aparecen justo cuando el mate está a punto de enfriarse",
+    "Los stickers de IA que los emprendedores usan para cerrar rondas de financiamiento",
+    "Las IA que te avisan cuando el boliche está lleno antes de que lo sepas",
+    "Los trucos de IA para que el delivery llegue antes de que termines el alfajor"
+  ]
+}

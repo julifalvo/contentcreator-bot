@@ -41,6 +41,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import angulos
 import content_hosting
 import telegram_client
 import tiktok_client
@@ -53,6 +54,7 @@ ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 _NOTAS_FORMATO = {
     "humor": "  (formato humor: situación graciosa en 2da persona, no un caso)",
     "sabias_que": "  (formato educativo: dato o concepto, sin caso ni solución puntual)",
+    "chisme": "  (fun content: ranking/lista graciosa IA + cultura argenta, con íconos pixel art, sin caso ni pitch)",
 }
 
 
@@ -97,6 +99,10 @@ _pending: dict | None = None
 _wizard: dict | None = None
 
 _ANGULO_MAX_LEN = 60
+# Cuántas opciones de ángulo mostrar como botones en el wizard: es un
+# subconjunto al azar del pool (angulos.py), que puede tener 40+ y no entra
+# cómodo entero como botones de Telegram.
+_ANGULO_OPCIONES_WIZARD = 8
 
 
 def _truncar(texto: str, n: int) -> str:
@@ -193,7 +199,7 @@ def _enviar_a_aprobar(folder) -> None:
             "folder": folder,
             "formato": "video",
             "video_path": video_path,
-            "title": content["escenas"][0].get("on_screen") or content["negocio"],
+            "title": content["negocio"],
             "caption": caption,
         }
         return
@@ -259,9 +265,20 @@ def _handle_wizard_callback(cq: dict) -> None:
             pillar_key = valor
         pillar = PILLARS[pillar_key]
         _wizard["pilar_key"] = pillar_key
+
+        opciones = angulos.muestra(pillar_key, _ANGULO_OPCIONES_WIZARD)
+        if not opciones:
+            telegram_client.send_message(
+                f"Todavía no hay ángulos generados para '{pillar['label']}'. "
+                f"Corré: python refrescar_angulos.py {pillar_key}"
+            )
+            _wizard = None
+            return
+
+        _wizard["angulo_opciones"] = opciones
         botones = [
             [(f"{i + 1}. {_truncar(a, _ANGULO_MAX_LEN)}", f"wz|angulo|{i}")]
-            for i, a in enumerate(pillar["angle"])
+            for i, a in enumerate(opciones)
         ]
         botones.append([("🎲 Cualquiera", "wz|angulo|random")])
         _wizard["message_id"] = telegram_client.send_choice(f"Pilar: {pillar['label']}. ¿Qué ángulo?", botones)
@@ -269,12 +286,21 @@ def _handle_wizard_callback(cq: dict) -> None:
 
     if campo == "angulo":
         pillar = PILLARS[_wizard["pilar_key"]]
-        angulo = random.choice(pillar["angle"]) if valor == "random" else pillar["angle"][int(valor)]
+        angulo = angulos.elegir_angulo(_wizard["pilar_key"]) if valor == "random" else _wizard["angulo_opciones"][int(valor)]
 
         if _wizard["formato"] == "video":
             pillar_key = _wizard["pilar_key"]
             _wizard = None
             _lanzar_generacion_video(pillar_key, angulo)
+            return
+
+        if pillar.get("formato") == "chisme":
+            # Los íconos pixel art no son opcionales acá (a diferencia de la
+            # slide 'foto' del formato caso/humor/sabías que), así que no
+            # tiene sentido preguntar "¿incluir foto IA?": se genera directo.
+            pillar_key = _wizard["pilar_key"]
+            _wizard = None
+            _lanzar_generacion(pillar_key, angulo, con_foto=False)
             return
 
         _wizard["angulo"] = angulo

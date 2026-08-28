@@ -56,9 +56,12 @@ revisión de algo ya generado:
 3. Si es humor, pensalo como una situación reconocible y cotidiana, no un
    chiste genérico ni humor a costa del cliente.
 4. Si el usuario quiere que la idea se genere de verdad (no solo brainstorm),
-   la forma correcta de integrarla es agregarla a `pillar["angle"]` en
-   `config.py` — el texto final siempre lo escribe la IA en el momento
+   la forma correcta de integrarla es agregarla directo al pool en
+   `angulos_pool.json` (vía `angulos.agregar(pillar_key, [angulo])`, o
+   corriendo `python refrescar_angulos.py <pilar>` para que la IA invente
+   varios nuevos) — los ángulos ya no viven hardcodeados en `config.py`. El
+   texto final de cada pieza lo sigue escribiendo la IA en el momento
    (Groq/Gemini), nunca se hardcodea contenido final en el repo.
 5. Antes de prometer que algo "ya está integrado", verificá el estado real
-   del código (config.py, content_rules.py) en vez de asumir por este skill:
-   es un resumen para brainstorming, no la fuente de verdad.
+   del código (config.py, angulos.py, content_rules.py) en vez de asumir por
+   este skill: es un resumen para brainstorming, no la fuente de verdad.

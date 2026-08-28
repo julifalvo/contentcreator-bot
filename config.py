@@ -1,7 +1,9 @@
-"""Configuración: los pilares de contenido y sus ángulos.
+"""Configuración: los pilares de contenido.
 
-Cada pilar trae varios ÁNGULOS puntuales; generate.py sortea uno por pieza y
-se lo pasa a la IA como semilla concreta. Entre los 4 pilares suman ~24.
+Los ÁNGULOS de cada pilar YA NO viven acá hardcodeados: generate.py sortea
+uno del pool en angulos_pool.json (vía angulos.py), que se amplía corriendo
+`python refrescar_angulos.py` — ahí la IA inventa ángulos nuevos evitando
+repetir los que ya están, en vez de tener que editar este archivo a mano.
 
 El resto de la configuración visual (paletas, tipografías, layout) vive ahora
 en design.py, que arma el HTML editorial de cada slide.
@@ -28,50 +30,18 @@ PILLARS = {
     "automatizacion": {
         "label": "Automatización",
         "emoji": "⚙️",
-        "angle": [
-            "Cómo un agente de WhatsApp carga pedidos automáticamente sin que nadie tipee nada",
-            "Cómo automatizar el recordatorio de turnos para bajar los faltazos",
-            "Cómo un bot avisa cuando se está por agotar el stock de un producto",
-            "Cómo automatizar el armado de un pedido a partir de un audio de voz",
-            "Cómo eliminar las respuestas repetidas a la misma pregunta de siempre",
-            "Cómo automatizar el alta de un cliente nuevo sin cargar datos a mano",
-        ],
     },
     "eficiencia_comercial": {
         "label": "Eficiencia Comercial",
         "emoji": "📈",
-        "angle": [
-            "Cómo un agente responde leads al instante para no perder ventas por tardar",
-            "Cómo cotizar automáticamente sin que el cliente espere horas",
-            "Cómo reservar turnos por WhatsApp sin que se pisen los horarios",
-            "Cómo un agente distingue una urgencia real de una consulta común",
-            "Cómo recuperar a un cliente que preguntó precio y no volvió a escribir",
-            "Cómo cerrar una venta por chat sin que un vendedor esté siempre online",
-        ],
     },
     "optimizacion_operativa": {
         "label": "Optimización Operativa",
         "emoji": "🛠️",
-        "angle": [
-            "Cómo automatizar el cobro de cuotas mensuales sin perseguir a nadie",
-            "Cómo cubrir automáticamente un turno cancelado con la lista de espera",
-            "Cómo controlar el stock de un negocio sin revisar todo a ojo",
-            "Cómo ordenar la agenda de un negocio que antes vivía en un cuaderno",
-            "Cómo evitar que un insumo se termine sin que nadie lo note",
-            "Cómo automatizar el armado de fichas o legajos de clientes nuevos",
-        ],
     },
     "transformacion": {
         "label": "Transformación Digital",
         "emoji": "🚀",
-        "angle": [
-            "Cómo un negocio de toda la vida empieza a vender también por WhatsApp",
-            "Cómo pasar de un cuaderno de turnos a un agente que agenda solo",
-            "Cómo un local que dependía solo del mostrador suma un canal digital",
-            "Cómo modernizar la atención al cliente sin cambiar todo el negocio",
-            "Cómo un negocio chico compite con cadenas más grandes usando IA",
-            "Cómo digitalizar un proceso interno sin gastar en sistemas caros",
-        ],
     },
     # A diferencia de los demás pilares (caso de un cliente, tercera persona),
     # este usa formato distinto: situación cotidiana en segunda persona con
@@ -80,14 +50,6 @@ PILLARS = {
         "label": "Humor",
         "emoji": "😅",
         "formato": "humor",
-        "angle": [
-            "Los estados de tu WhatsApp de negocio en un día cualquiera",
-            "El ranking de mensajes que te llegan a las 3 de la mañana",
-            "Lo que pensás mientras contestás la misma pregunta por décima vez en la semana",
-            "La cara que pone un cliente cuando le contestás 6 horas después",
-            "Un día típico atendiendo el mostrador y el WhatsApp al mismo tiempo",
-            "Las excusas que te decís todos los meses para no automatizar todavía",
-        ],
     },
     # Contenido educativo "¿Sabías que...?": no cuenta el caso de un cliente
     # ni plantea una solución puntual (nada de chat/web/flujo), solo un dato o
@@ -97,14 +59,6 @@ PILLARS = {
         "label": "Sabías que...?",
         "emoji": "💡",
         "formato": "sabias_que",
-        "angle": [
-            "Cuánto tiempo pierde en promedio un negocio chico respondiendo siempre lo mismo por WhatsApp",
-            "Qué es en criollo un agente de IA (sin la jerga técnica)",
-            "Por qué la mayoría de las consultas por WhatsApp llegan fuera del horario de atención",
-            "Qué diferencia a un chatbot de un agente de IA de verdad",
-            "Cuánto cuesta hoy automatizar algo chico en un negocio, en plata real",
-            "Por qué responder rápido importa más que responder perfecto",
-        ],
     },
     # Mismo formato "caso" que los primeros 4 pilares (nada nuevo que programar):
     # ya exige mostrar la solución funcionando (chat/web/flujo), así que estos
@@ -114,13 +68,14 @@ PILLARS = {
     "demos_tutoriales": {
         "label": "Demos y Tutoriales",
         "emoji": "🎓",
-        "angle": [
-            "Tutorial paso a paso: así se conecta un agente de IA a WhatsApp Business",
-            "Demo en vivo: así agenda un turno un agente, de punta a punta",
-            "Así responde un agente en la página web de un negocio, paso a paso",
-            "Tutorial: cómo se arma un flujo que carga un pedido solo",
-            "Demo: así consulta un agente el stock real antes de confirmar una venta",
-            "Paso a paso: cómo se automatiza el seguimiento de un cliente que preguntó y no volvió",
-        ],
+    },
+    # Puro fun content, sin caso de cliente ni pitch de la agencia: rankings/
+    # listas graciosas tipo "Esenciales 2026" que mezclan herramientas de IA
+    # con costumbres argentinas (mate, asado, dólar blue...). Cada ítem de la
+    # lista lleva un ícono pixel art generado por IA. Ver chisme_rules.py.
+    "chisme": {
+        "label": "Chisme Tech Argento",
+        "emoji": "🧉",
+        "formato": "chisme",
     },
 }
