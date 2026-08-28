@@ -5,7 +5,7 @@ imágenes o video) con aprobación manual por Telegram antes de cada publicació
 
 ## Qué hace
 
-Tres formatos de contenido, elegibles desde el wizard de `/generar`:
+Cuatro formatos de contenido, elegibles desde el wizard de `/generar`:
 
 - **Carrusel de imágenes** (default): un LLM (`ai_providers.py`, alterna entre
   Groq y Gemini) escribe una historia completa y la parte en slides;
@@ -16,13 +16,19 @@ Tres formatos de contenido, elegibles desde el wizard de `/generar`:
 - **Video narrado**: guion generado por IA (`video_rules.py`) narrado con voz
   real (`elevenlabs_client.py`, ElevenLabs free tier) sobre b-roll de video
   real (`pexels_client.py`, Pexels), armado con ffmpeg (`video_narrado.py`).
+- **Chisme Tech Argento** (`chisme_rules.py`): puro fun content, sin caso de
+  cliente ni pitch — rankings y listas graciosas que mezclan herramientas de
+  IA con costumbres argentinas, con un ícono pixel art generado por IA por
+  cada ítem de la lista.
 
 Pipeline común:
 
 1. **Generación** (`generate.py`): a partir de un pilar temático (`config.py`)
    y un ángulo/rubro (elegido en el wizard o al azar), se pide el contenido a
    `ai_providers.py`, que reintenta con el otro proveedor de texto si uno se
-   queda sin cuota.
+   queda sin cuota. Los ángulos no están hardcodeados: salen del pool en
+   `angulos_pool.json` (`angulos.py`), que se amplía corriendo
+   `refrescar_angulos.py`.
 2. **Aprobación** (`telegram_client.py`): la vista previa (imágenes o video +
    caption) se manda a un chat de Telegram y espera un botón de
    aprobar/cancelar antes de publicar nada.
@@ -30,7 +36,14 @@ Pipeline común:
    Content Posting API (carrusel de fotos o video, según el formato).
 4. **Bot en vivo** (`bot.py`): corre todo el pipeline a demanda desde
    Telegram (`/generar` abre un wizard con botones; `/publicar`, `/pilares`,
-   `/ayuda`), sin tocar la terminal.
+   `/metricas`, `/ayuda`), sin tocar la terminal.
+5. **Realimentación** (`tiktok_metrics.py` + `rendimiento.py`): se traen las
+   vistas reales de lo ya publicado (Display API de TikTok) y se cruzan con
+   el pilar y el ángulo que generó cada pieza — el caption guardado en
+   `output/*/contenido.json` es el que se subió, así que emparejarlo con la
+   descripción del video devuelve la atribución. Con eso, los ángulos nuevos
+   que inventa `refrescar_angulos.py` salen empujados hacia lo que de verdad
+   funcionó en la cuenta, y `/metricas` muestra qué pilar rinde mejor.
 
 Aparte, `scrapecreators_client.py` es una herramienta de investigación de
 competencia (perfiles/posts de TikTok) para inspirar ángulos nuevos — no es
@@ -66,7 +79,10 @@ archivos subidos directo); con `--video` se sube un `.mp4` en su lugar y no
 hace falta ese paso.
 
 Corré `python tiktok_auth.py` una vez para autorizar tu cuenta de TikTok
-(genera `tiktok_tokens.json`, que **no** se commitea).
+(genera `tiktok_tokens.json`, que **no** se commitea). Para que además
+funcionen las métricas hay que habilitar los scopes `user.info.stats` y
+`video.list` en la app de TikTok antes de autorizar (ver el encabezado de
+`tiktok_metrics.py`); sin ellos el resto del pipeline anda igual.
 
 ## Uso
 
@@ -75,7 +91,14 @@ python generate.py --pillar automatizacion    # genera un carrusel puntual
 python generate.py --pillar random --count 3  # varias piezas al azar
 python generate.py --pillar automatizacion --foto  # permite la slide de foto real
 python bot.py                                 # deja el bot escuchando Telegram
+python refrescar_angulos.py                   # suma ángulos nuevos al pool
+python refrescar_angulos.py humor --n 25      # solo ese pilar, pidiendo más
 ```
+
+`refrescar_angulos.py` es la forma de sumar ideas: en vez de editar
+`config.py`, la IA inventa ángulos nuevos evitando repetir los que ya están
+y guiándose por las métricas reales de la cuenta (con `--sin-metricas` no
+consulta TikTok).
 
 Desde Telegram, con el bot corriendo:
 
@@ -84,6 +107,7 @@ Desde Telegram, con el bot corriendo:
 /generar [pilar]     atajo rápido: carrusel con ese pilar, ángulo y rubro al azar
 /publicar           manda a aprobar la última pieza generada (sin regenerar)
 /pilares             lista los pilares de contenido disponibles
+/metricas           seguidores, top 5 por vistas y rendimiento por pilar
 /ayuda               este mensaje
 ```
 

@@ -67,5 +67,6 @@ def generate_video_script(pilar: str, angulo: str, rubro: str) -> dict:
     return _con_fallback("generate_video_script", pilar, angulo, rubro)
 
 
-def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int) -> dict:
-    return _con_fallback("generate_angulos", pilar, formato, existentes, n)
+def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int,
+                     rendimiento: str | None = None) -> dict:
+    return _con_fallback("generate_angulos", pilar, formato, existentes, n, rendimiento)

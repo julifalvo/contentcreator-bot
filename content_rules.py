@@ -203,12 +203,22 @@ _ANGULOS_ESTILO = {
 }
 
 
-def get_angulos_system_prompt(formato: str | None) -> str:
+# Instrucción extra que se suma al prompt de ángulos solo cuando
+# refrescar_angulos.py consiguió las métricas reales de la cuenta (ver
+# rendimiento.py). Sin datos no se manda: a un modelo al que le pedís "guiate
+# por lo que funcionó" sin decirle qué funcionó, se inventa el criterio.
+_ANGULOS_RENDIMIENTO = """
+CÓMO USAR LOS DATOS DE RENDIMIENTO: en el mensaje te paso las vistas reales que hicieron piezas ya publicadas de esta cuenta, junto al ángulo que generó cada una. Fijate qué tienen en común los de arriba —qué tipo de mecánica, qué grado de detalle, qué promesa— y escribí ángulos nuevos que compartan ESO. No los copies ni los reformules: esos ya se usaron. De los de abajo tomá qué evitar. Si un ángulo tuyo se parece más a los de abajo que a los de arriba, cambialo.
+"""
+
+
+def get_angulos_system_prompt(formato: str | None, con_rendimiento: bool = False) -> str:
     estilo = _ANGULOS_ESTILO.get(formato, _ANGULOS_ESTILO[None])
+    rendimiento = _ANGULOS_RENDIMIENTO if con_rendimiento else ""
     return f"""Generás ÁNGULOS nuevos para rootbusinessai, una agencia que construye agentes de IA y automatizaciones para negocios chicos de Argentina. Un ángulo es la semilla puntual de UNA pieza de contenido para TikTok — no el texto final, solo la idea concreta que después otra IA desarrolla en un carrusel o video completo.
 
 {estilo}
-
+{rendimiento}
 REGLAS:
 - Cada ángulo es UNA sola oración, sin numerarla, sin guion ni comillas alrededor.
 - Específico y accionable: si dos ángulos de tu respuesta podrían intercambiarse sin que se note, están mal.

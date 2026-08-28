@@ -213,17 +213,22 @@ def generate_chisme(pilar: str, angulo: str) -> dict:
     raise RuntimeError(f"Groq no devolvió un carrusel 'chisme' válido tras {MAX_RETRIES} intentos: {last_error}")
 
 
-def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int) -> dict:
+def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int,
+                     rendimiento: str | None = None) -> dict:
     """Pide a Groq `n` ángulos nuevos para `pilar`, evitando repetir
     `existentes`. Usado por refrescar_angulos.py para ampliar el pool sin
-    tocar código. Costo: $0 (free tier)."""
+    tocar código. `rendimiento` es el bloque opcional con las métricas reales
+    de la cuenta (ver rendimiento.py), para empujar los ángulos nuevos hacia
+    lo que ya funcionó en la cuenta. Costo: $0 (free tier)."""
     lista_existentes = "\n".join(f"- {a}" for a in existentes) or "(ninguno todavía)"
+    bloque_rendimiento = f"\n{rendimiento}\n" if rendimiento else ""
     user = (
-        f"Pilar: {pilar}.\n\n"
+        f"Pilar: {pilar}.\n"
+        f"{bloque_rendimiento}\n"
         f"Ángulos ya existentes (no los repitas ni los parafrasees):\n{lista_existentes}\n\n"
         f"Generá {n} ángulos nuevos."
     )
-    system = content_rules.get_angulos_system_prompt(formato)
+    system = content_rules.get_angulos_system_prompt(formato, con_rendimiento=bool(rendimiento))
 
     last_error: Exception | None = None
     for intento in range(1, MAX_RETRIES + 1):

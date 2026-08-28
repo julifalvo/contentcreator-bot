@@ -43,6 +43,7 @@ load_dotenv()
 
 import angulos
 import content_hosting
+import rendimiento
 import telegram_client
 import tiktok_client
 import tiktok_metrics
@@ -240,13 +241,14 @@ def _handle_publicar() -> None:
 
 
 def _handle_metricas() -> None:
-    """Trae seguidores/likes totales de la cuenta y los videos con más vistas
-    (Display API, ver tiktok_metrics.py). Falla con un mensaje claro si el
-    token todavía no tiene los scopes user.info.stats/video.list."""
+    """Trae seguidores/likes totales de la cuenta y el rendimiento de lo ya
+    publicado, cruzado con el pilar y el ángulo que generó cada video
+    (rendimiento.py). Falla con un mensaje claro si el token todavía no tiene
+    los scopes user.info.stats/video.list."""
     try:
         access_token = tiktok_client.get_access_token()
         cuenta = tiktok_metrics.get_account_stats(access_token)
-        videos = tiktok_metrics.top_videos(access_token, n=5)
+        videos = rendimiento.traer(access_token)
     except Exception as e:
         telegram_client.send_message(
             f"No pude traer las métricas: {e}\n\n"
@@ -265,13 +267,25 @@ def _handle_metricas() -> None:
     ]
     if not videos:
         lineas.append("(todavía no hay videos publicados en la cuenta)")
-    for v in videos:
-        desc = (v.get("video_description") or "").strip()
-        desc = (desc[:57] + "...") if len(desc) > 60 else (desc or "(sin descripción)")
+    for v in sorted(videos, key=lambda v: v.get("view_count", 0), reverse=True)[:5]:
+        etiqueta = v.get("angulo") or (v.get("video_description") or "").strip().replace("\n", " ")
+        pilar = PILLARS.get(v.get("pilar"), {}).get("label", "sin atribuir")
         lineas.append(
             f"- {v.get('view_count', '?')} vistas · {v.get('like_count', '?')} likes · "
-            f"{v.get('comment_count', '?')} coment. · {v.get('share_count', '?')} compartidos — {desc}"
+            f"{v.get('comment_count', '?')} coment. · {v.get('share_count', '?')} compartidos\n"
+            f"  {_truncar(etiqueta, 70)} ({pilar})"
         )
+
+    filas = rendimiento.por_pilar(videos)
+    if filas:
+        atribuidos = sum(f["piezas"] for f in filas)
+        lineas += ["", f"Por pilar ({atribuidos} de {len(videos)} videos cruzados con output/):"]
+        for f in filas:
+            lineas.append(
+                f"- {PILLARS.get(f['pilar'], {}).get('emoji', '•')} {f['label']}: {f['vistas_mediana']:.0f} vistas medianas "
+                f"({f['piezas']} pieza{'s' if f['piezas'] != 1 else ''}, {f['vistas_total']} en total)"
+            )
+        lineas += ["", "Los ángulos nuevos ya salen guiados por esto: python refrescar_angulos.py"]
     telegram_client.send_message("\n".join(lineas))
 
 
