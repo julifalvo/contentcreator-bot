@@ -9,7 +9,7 @@ Cinco formatos de contenido, elegibles desde el wizard de `/generar`:
 
 - **Carrusel de imágenes** (default): un LLM (`ai_providers.py`, alterna entre
   Groq y Gemini) escribe una historia completa y la parte en slides;
-  `design.py`/`render.py` las renderizan a PNG (1440x3200, 20:9) con Chrome
+  `design.py`/`render.py` las renderizan a PNG (1080x1920, 9:16) con Chrome
   headless.
   Opcionalmente una slide puede ser una foto real generada por IA
   (`image_gen.py`).

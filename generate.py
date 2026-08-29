@@ -8,7 +8,7 @@ Pipeline:
     slide es tipo 'foto', image_gen.py le pide esa imagen al generador de
     imágenes (Cloudflare Workers AI, con Pollinations de respaldo)
     -> design.py arma el HTML editorial de cada slide -> Chrome headless lo
-    rinde a PNG 1440x3200 (20:9, ver render.py).
+    rinde a PNG 1080x1920 (9:16, el tamaño que TikTok recomienda).
 
 Todo gratis: Groq/Gemini tienen free tier sin tarjeta, las imágenes salen del
 free tier de Cloudflare Workers AI (o de Pollinations, que ni API key pide), y

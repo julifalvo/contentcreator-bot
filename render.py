@@ -17,28 +17,33 @@ from pathlib import Path
 
 from PIL import Image
 
-# El lienzo es 20:9, NO 9:16. Suena raro para "formato TikTok", pero es la
-# unica forma de que no se recorte: TikTok muestra el posteo a pantalla
-# completa con "cover", y las pantallas de hoy son 19.5:9 o 20:9. Un 1080x1920
-# (9:16, 1:1.78) en un celular 20:9 (1:2.22) se escala por alto -x1.25- y
-# pierde ~135px de CADA lado; de ahi que la pieza se viera a la vez ampliada,
-# cortada y mas blanda de lo que se rindio. Con el lienzo ya a 20:9 la imagen
-# entra 1:1 en esos telefonos y no hay ni zoom ni recorte lateral.
+# El lienzo es 1080x1920 (9:16): es el tamano que TikTok recomienda
+# explicitamente para carruseles de fotos, no el nativo de la pantalla.
 #
-# En los 16:9 que quedan se recorta arriba y abajo, y por eso design.py suma
-# 240px de padding en cada punta: esas dos franjas estan vacias a proposito y
-# son lo unico que se pierde. El area util para el contenido queda igual que
-# antes (1430px), o sea que ninguna slide se re-acomoda.
-CANVAS_W, CANVAS_H = 1080, 2400
+# Esto corrige un cambio anterior mal fundado: se probo pasar el lienzo a 20:9
+# (nativo de los celulares de hoy) razonando por analogia con el VIDEO -que
+# TikTok si escala "cover" a pantalla completa, recortando lo que sobra-. Para
+# FOTOS no es asi: TikTok documenta 1080x1920 como el tamano optimo y advierte
+# que cualquier otra proporcion (4:5, 1:1, horizontal) se muestra con
+# letterbox/recorte en su propio visor. El resultado del 20:9 fue justamente
+# eso: la app lo forzo a su contenedor y termino recortando el kicker de
+# arriba, distinto al problema original pero igual de roto.
+#
+# Lo que SI hacia falta arreglar (y sigue arreglado abajo) es la zona segura:
+# TikTok pinta sobre la imagen una franja de UI de ~200px arriba (tabs
+# Siguiendo/Para ti, buscador) y una mas grande abajo (caption, usuario,
+# like/comentar/compartir), documentadas como zona de peligro del 9:16
+# estandar. design.py ahora deja mas aire en las dos puntas que el minimo
+# documentado, para no repetir el kicker tapado.
+CANVAS_W, CANVAS_H = 1080, 1920
 
-# Se rinde al doble (2160x4800) y se baja a ANCHO_FINAL con Lanczos, en vez de
+# Se rinde al doble (2160x3840) y se baja a ANCHO_FINAL con Lanczos, en vez de
 # rendir directo al tamano final: el supersampling le da al texto un
 # antialiasing mucho mas limpio que el del rasterizador a 1x, y eso sobrevive
-# mejor al JPEG y al recompresor de TikTok. El entregable queda igual en 20:9,
-# a 1440 de ancho: por encima de los 1080 del canvas para los telefonos de
-# 1440px, sin irse a un archivo de varios MB por slide.
+# mejor al JPEG y al recompresor de TikTok. El entregable queda exactamente en
+# el tamano que TikTok recomienda (1080x1920), sin ambiguedad.
 ESCALA_RENDER = 2
-ANCHO_FINAL = 1440
+ANCHO_FINAL = 1080
 
 FONTS_DIR = Path(__file__).parent / "assets" / "fonts"
 
@@ -86,7 +91,7 @@ def image_data_uri(path: Path) -> str:
 
 
 def html_to_png(html: str, out_path: Path) -> Path:
-    """Rinde `html` a un PNG de 1440x3200 (20:9, ver CANVAS_H) en `out_path`."""
+    """Rinde `html` a un PNG de 1080x1920 (9:16, el tamano que TikTok recomienda para carruseles de fotos)."""
     # Chrome escribe el screenshot relativo a SU cwd, no al nuestro: si no le
     # pasamos la ruta absoluta, falla con "no puede encontrar la ruta".
     out_path.parent.mkdir(parents=True, exist_ok=True)
