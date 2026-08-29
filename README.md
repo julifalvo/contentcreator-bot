@@ -65,6 +65,16 @@ Pipeline común:
    funcionó en la cuenta, y `/metricas` muestra qué pilar y qué intención rinden
 mejor.
 
+Las slides que muestran la solución funcionando (`chat`, `web`, `flujo`) se
+renderizan desde `mockups.py`, que tiene **diez variantes visuales de cada
+una** y sortea la combinación por pieza: el chat sale como captura de teléfono
+de verdad (barra de estado, wallpaper, burbujas con cola, doble check) en
+WhatsApp claro/oscuro/Business/Android, Telegram, iMessage, Instagram,
+Messenger o SMS; la web, dentro de Safari/Chrome/celular y en tres layouts de
+página (landing, split y panel); el flujo, como nodos conectados, timeline o
+log de consola. Con las 4 paletas son 4.000 combinaciones, así que dos piezas
+del mismo ángulo no se ven igual.
+
 Las imágenes de las slides (`image_gen.py`) salen de **Cloudflare Workers AI**
 con FLUX.1-schnell — gratis y sin tarjeta: 10.000 neurons por día, unas 400
 imágenes al tamaño que usa el bot. Si no está configurado, se quedó sin cuota o

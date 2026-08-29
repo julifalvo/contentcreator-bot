@@ -6,11 +6,16 @@ contraste (Playfair Display) para los titulares, sans chico y espaciado
 generosos y números gigantes como ancla visual.
 
 Cada pieza sortea UNA paleta y la mantiene de principio a fin: la variedad
-está entre videos, no dentro del mismo carrusel.
+está entre videos, no dentro del mismo carrusel. Lo mismo vale para las
+variantes de los mockups de producto ('chat', 'web', 'flujo'), que viven en
+mockups.py y se sortean por pieza: diez de cada tipo, así el mismo ángulo no
+rinde siempre la misma lámina.
 """
 
 import html
 import random
+
+import mockups
 
 from render import CANVAS_H, CANVAS_W, font_data_uri
 
@@ -435,67 +440,33 @@ def _texto(s: dict, p: dict) -> str:
 <div class="body-l" style="margin-top:44px; max-width:88%">{html.escape(s['cuerpo'])}</div></div>"""
 
 
-def _chat(s: dict, p: dict) -> str:
-    """Slide 'chat': se renderiza como una captura real de WhatsApp (header con
-    avatar + estado, burbujas blanca/verde con tail, doble check azul en la
-    respuesta), no como el diagrama editorial de antes — que se veía como un
-    gráfico armado, no como algo que el espectador reconozca de su propio celular."""
-    nombre, _, meta = s["quien_entra"].partition("·")
-    nombre = nombre.strip() or s["quien_entra"]
-    meta = meta.strip() or "en línea"
-    inicial = html.escape((nombre[:1] or "?").upper())
-    pie = (
-        f'<div class="body-l" style="margin-top:48px; font-size:32px">{html.escape(s["pie"])}</div>'
-        if s.get("pie") else ""
-    )
-    return f"""<div>
-<h2 style="font-size:64px">{html.escape(s['titular'])}</h2>
-<div class="chat-app" style="margin-top:64px">
-<div class="chat-head"><div class="chat-avatar">{inicial}</div>
-<div><div class="chat-name">{html.escape(nombre)}</div><div class="chat-status">{html.escape(meta)}</div></div></div>
-<div class="chat-body">
-<div class="bubble bubble-in">{html.escape(s['entrada'])}<span class="bubble-meta">{html.escape(meta)}</span></div>
-<div class="bubble bubble-out">{html.escape(s['respuesta'])}<span class="bubble-meta">{html.escape(s['quien_responde'])} <span class="bubble-check">&#10003;&#10003;</span></span></div>
-</div>
-<div class="chat-inputbar"><span class="pill">Escribí un mensaje...</span></div>
-</div>{pie}</div>"""
+def _chat(s: dict, p: dict, skin: str | None = None) -> str:
+    """Slide 'chat': captura de teléfono con la conversación real (barra de
+    estado, cabecera de la app, wallpaper, burbujas con cola y acuse). El
+    layout y los colores del teléfono viven en mockups.py, que tiene diez
+    variantes — WhatsApp claro/oscuro/Business/Android, Telegram, iMessage,
+    Instagram, Messenger, SMS — sorteadas una por pieza. Antes esto era una
+    barra de color con dos rectángulos redondeados: se leía como un diagrama
+    armado y todas las piezas de la cuenta salían visualmente iguales."""
+    return mockups.chat_html(s, p, skin)
 
 
-def _web(s: dict, p: dict) -> str:
-    """Slide 'web': captura de navegador con un widget de chat flotante
-    (agente IA 'en línea') superpuesto abajo a la derecha, como el que
-    tendría de verdad el sitio de un negocio con un agente instalado."""
-    chips = "".join(f'<span class="chip">{html.escape(c)}</span>' for c in s.get("chips", []))
-    return f"""<div>
-<h2 style="font-size:60px">{html.escape(s['titular'])}</h2>
-<div class="browser" style="margin-top:60px">
-<div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
-<span class="url">{html.escape(s['url'])}</span></div>
-<div class="screen">
-<div style="font-family:'Display',serif; font-size:56px; font-weight:700; line-height:1.14">
-{html.escape(s['headline'])}</div>
-<div class="body-l" style="margin-top:26px; font-size:32px">{html.escape(s['bajada'])}</div>
-<div class="chips">{chips}</div>
-<div class="btn">{html.escape(s['boton'])}</div>
-</div>
-<div class="web-widget">
-<div class="web-widget-head"><span class="web-widget-dot"></span>
-<div><div class="web-widget-title">Agente IA</div><div class="web-widget-sub">En línea ahora</div></div></div>
-<div class="web-widget-body">Hola&#128075; ¿en qué te puedo ayudar?
-<div class="web-widget-bubble">Escribime tu consulta y te respondo al toque.</div></div>
-</div>
-</div></div>"""
+def _web(s: dict, p: dict, skin: str | None = None) -> str:
+    """Slide 'web': el sitio del negocio con el agente IA instalado, dentro de
+    un navegador de verdad (semaforo, pestana con favicon, URL con candado) o
+    del telefono. Diez variantes en mockups.SKINS_WEB, que combinan cromo,
+    tema claro/oscuro y tres layouts de pagina (landing, split y panel), asi
+    el mismo campo 'headline' no rinde siempre la misma pantalla."""
+    return mockups.web_html(s, p, skin)
 
 
-def _flujo(s: dict, p: dict) -> str:
-    pasos = "".join(
-        f'<div class="step"><div class="step-n">{i}</div>'
-        f'<div class="step-t">{html.escape(t)}</div></div>'
-        for i, t in enumerate(s.get("pasos", []), 1)
-    )
-    return f"""<div>
-<h2 style="font-size:64px">{html.escape(s['titular'])}</h2>
-<div class="steps" style="margin-top:60px">{pasos}</div></div>"""
+def _flujo(s: dict, p: dict, skin: str | None = None) -> str:
+    """Slide 'flujo': los pasos que corre la automatizacion, en una de las diez
+    variantes de mockups.SKINS_FLUJO (nodos conectados, timeline o log de
+    consola, en claro y oscuro). Antes era una lista con filetes: correcta,
+    pero identica en todas las piezas y con cara de folleto en vez de cara de
+    software funcionando."""
+    return mockups.flujo_html(s, p, skin)
 
 
 def _cita(s: dict, p: dict) -> str:
@@ -622,18 +593,26 @@ BUILDERS = {
 
 SLIDE_TYPES = tuple(BUILDERS)
 
+# Tipos cuyo cuerpo es un mockup de producto con variantes visuales (mockups.py).
+_TIPOS_MOCKUP = {"chat", "web", "flujo"}
+
 # Tipos que se renderizan con foto de fondo a página completa (_page_fondo)
 # en vez del papel editorial (_page): formato 'impacto'. Ver build_slide_html.
 _TIPOS_FONDO = {"portada_fondo", "punto", "cierre_fondo"}
 
 
-def build_slide_html(slide: dict, palette: dict, index: int, total: int, kicker: str = "") -> str:
-    """Arma el HTML completo de un slide a partir del dict que devolvió la IA."""
+def build_slide_html(slide: dict, palette: dict, index: int, total: int, kicker: str = "",
+                     skin: str | None = None) -> str:
+    """Arma el HTML completo de un slide a partir del dict que devolvió la IA.
+
+    `skin` es la variante visual del mockup (mockups.py), sorteada una vez por
+    pieza en generate.py — igual que la paleta. Solo la reciben los tipos que
+    muestran un producto funcionando; al resto no les significa nada."""
     tipo = slide.get("tipo")
     if tipo not in BUILDERS:
         raise ValueError(f"Tipo de slide desconocido: {tipo!r}")
     builder, _ = BUILDERS[tipo]
-    inner = builder(slide, palette)
+    inner = builder(slide, palette, skin) if tipo in _TIPOS_MOCKUP else builder(slide, palette)
     if tipo in _TIPOS_FONDO:
         return _page_fondo(palette, slide.get("_img_data_uri", ""), inner, index, total, kicker)
     return _page(palette, inner, index, total, kicker)

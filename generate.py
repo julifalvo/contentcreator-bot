@@ -36,6 +36,7 @@ import angulos
 import audiencia
 import design
 import image_gen
+import mockups
 import render
 import video_narrado
 from ai_providers import (
@@ -119,9 +120,13 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
             )
             slide["_img_data_uri"] = image_gen.fetch_image_data_uri(fondo_prompt)
 
-    print(f"  Renderizando {len(slides)} slides ({palette['name']})...")
+    # Las variantes visuales de los mockups (telefono, navegador, diagrama):
+    # una por tipo, sorteadas juntas para toda la pieza igual que la paleta.
+    skins = mockups.pick_skins()
+    print(f"  Renderizando {len(slides)} slides ({palette['name']} · {skins['chat']})...")
     for i, slide in enumerate(slides, 1):
-        html = design.build_slide_html(slide, palette, i, len(slides), kicker=pillar["label"])
+        html = design.build_slide_html(slide, palette, i, len(slides), kicker=pillar["label"],
+                                       skin=skins.get(slide["tipo"]))
         render.html_to_png(html, folder / f"{i:02d}_{slide['tipo']}.png")
 
     hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
@@ -168,7 +173,7 @@ HASHTAGS:
     }
     (folder / "contenido.json").write_text(
         json.dumps({**data_sin_imagenes, "formato": "carrusel", "paleta": palette["name"],
-                    "pilar": pillar_key, "angulo": angulo,
+                    "pilar": pillar_key, "angulo": angulo, "skins": skins,
                     "intencion": ctx["intencion"], "tension": ctx["tension"]},
                    ensure_ascii=False, indent=2),
         encoding="utf-8",
