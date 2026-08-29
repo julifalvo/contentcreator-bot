@@ -304,6 +304,48 @@ h2 {{
 .item-icon-frame img {{ width:80%; height:80%; object-fit:contain; }}
 .item-nombre {{ font-family:'Display', serif; font-weight:800; font-size:88px; line-height:1.05; }}
 .item-detalle {{ font-size:38px; line-height:1.5; color:{p['dim']}; margin-top:28px; max-width:88%; }}
+/* --- Fondo llamativo (formato 'impacto'): foto generada por IA a página
+   completa detrás del texto, en vez del papel editorial del resto de la
+   marca. Colores fijos (blanco sobre velo oscuro), no la paleta sorteada:
+   una paleta pensada para papel claro no sirve arriba de una foto. El velo
+   es más oscuro arriba/abajo (donde van kicker y pie) y más suave al medio,
+   para que la foto siga siendo lo llamativo sin perder legibilidad. */
+.page-fondo {{ padding:190px 100px 300px; }}
+.bg-fondo {{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }}
+.scrim-fondo {{
+  position:absolute; inset:0; z-index:1;
+  background:linear-gradient(180deg, rgba(10,8,6,.60) 0%, rgba(10,8,6,.24) 30%, rgba(10,8,6,.30) 60%, rgba(10,8,6,.88) 100%);
+}}
+/* Todo lo que va arriba de la foto (kicker, filete, contenido, pie) necesita
+   z-index propio: sin esto el orden natural del DOM ya los deja arriba de
+   'bg-fondo'/'scrim-fondo', pero position:relative + z-index explícito evita
+   que un cambio de orden en _page_fondo() rompa el apilado en silencio. */
+.page-fondo .kicker-fondo, .page-fondo .rule-fondo, .page-fondo .content,
+.page-fondo .hair-fondo, .page-fondo .foot-fondo {{ position:relative; z-index:2; }}
+.kicker-fondo {{
+  font-size:26px; font-weight:700; letter-spacing:.34em; text-transform:uppercase; color:#FFD9A8;
+}}
+.rule-fondo {{ height:2px; background:#FFF9F2; opacity:.55; }}
+.hair-fondo {{ height:1px; background:rgba(255,249,242,.35); }}
+.foot-fondo {{ color:rgba(255,249,242,.8); }}
+.hook-fondo {{
+  font-family:'Display', serif; font-weight:800; font-size:104px; line-height:1.1;
+  color:#FFF9F2; letter-spacing:-.02em; text-shadow:0 6px 30px rgba(0,0,0,.35);
+}}
+.punto-numero {{
+  font-family:'Display', serif; font-weight:800; font-size:120px; line-height:1; color:#FFD9A8;
+  text-shadow:0 6px 30px rgba(0,0,0,.35);
+}}
+.punto-titulo {{
+  font-family:'Display', serif; font-weight:800; font-size:72px; line-height:1.1; color:#FFF9F2;
+  margin-top:18px; text-shadow:0 6px 30px rgba(0,0,0,.35);
+}}
+.punto-detalle {{ font-size:40px; line-height:1.55; color:rgba(255,249,242,.92); margin-top:26px; max-width:92%; }}
+.cierre-fondo-titular {{
+  font-family:'Display', serif; font-weight:800; font-size:92px; line-height:1.1; color:#FFF9F2;
+  text-shadow:0 6px 30px rgba(0,0,0,.35);
+}}
+.cierre-fondo-accion {{ font-size:40px; color:#FFD9A8; margin-top:36px; font-weight:600; }}
 """
 
 
@@ -322,6 +364,30 @@ def _page(p: dict, inner: str, index: int, total: int, kicker: str = "") -> str:
 <div class="content">{inner}</div>
 <div class="hair" style="margin-bottom:26px"></div>
 <div class="foot"><span>{HANDLE}</span>
+<span class="folio">{index:02d} / {total:02d}</span></div>
+</div></body></html>"""
+
+
+def _page_fondo(p: dict, img: str, inner: str, index: int, total: int, kicker: str = "") -> str:
+    """Envuelve el contenido en una página con una FOTO llamativa de fondo a
+    página completa (formato 'impacto'), en vez del papel editorial de
+    _page(): la paleta sorteada no se usa acá, los colores son fijos (blanco/
+    acento cálido sobre velo oscuro, ver 'fondo llamativo' en _css) porque
+    tienen que funcionar arriba de cualquier foto, no de un papel claro."""
+    head = ""
+    if kicker:
+        head = (
+            f'<div class="kicker-fondo">{html.escape(kicker)}</div>'
+            f'<div class="rule-fondo" style="margin:26px 0 0"></div>'
+        )
+    return f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<style>{_css(p)}</style></head><body><div class="page page-fondo">
+<img class="bg-fondo" src="{img}" alt="">
+<div class="scrim-fondo"></div>
+{head}
+<div class="content">{inner}</div>
+<div class="hair-fondo" style="margin-bottom:26px"></div>
+<div class="foot foot-fondo"><span>{HANDLE}</span>
 <span class="folio">{index:02d} / {total:02d}</span></div>
 </div></body></html>"""
 
@@ -512,6 +578,30 @@ def _item(s: dict, p: dict) -> str:
 </div>"""
 
 
+# --- Slides 'fondo' (formato 'impacto'): la foto va a página completa, la
+# agrega _page_fondo() como fondo de TODA la página, no acá adentro — estos
+# builders solo arman el texto que va encima. Ver build_slide_html() para el
+# ruteo a _page_fondo() en vez de _page().
+
+def _portada_fondo(s: dict, p: dict) -> str:
+    return f"""<div class="hook-fondo">{html.escape(s['titular'])}</div>"""
+
+
+def _punto(s: dict, p: dict) -> str:
+    return f"""<div>
+<div class="punto-numero">{int(s['numero']):02d}</div>
+<div class="punto-titulo">{html.escape(s['titulo'])}</div>
+<div class="punto-detalle">{html.escape(s['detalle'])}</div>
+</div>"""
+
+
+def _cierre_fondo(s: dict, p: dict) -> str:
+    return f"""<div>
+<div class="cierre-fondo-titular">{html.escape(s['titular'])}</div>
+<div class="cierre-fondo-accion">{html.escape(s['accion'])}</div>
+</div>"""
+
+
 BUILDERS = {
     "portada": (_portada, {"titular"}),
     "dato": (_dato, {"numero", "unidad", "detalle"}),
@@ -525,9 +615,16 @@ BUILDERS = {
     "comparacion": (_comparacion, {"titular", "chatbot", "agente"}),
     "item": (_item, {"nombre", "detalle", "icono_prompt"}),
     "cierre": (_cierre, {"titular", "accion"}),
+    "portada_fondo": (_portada_fondo, {"titular", "fondo_prompt"}),
+    "punto": (_punto, {"numero", "titulo", "detalle", "fondo_prompt"}),
+    "cierre_fondo": (_cierre_fondo, {"titular", "accion", "fondo_prompt"}),
 }
 
 SLIDE_TYPES = tuple(BUILDERS)
+
+# Tipos que se renderizan con foto de fondo a página completa (_page_fondo)
+# en vez del papel editorial (_page): formato 'impacto'. Ver build_slide_html.
+_TIPOS_FONDO = {"portada_fondo", "punto", "cierre_fondo"}
 
 
 def build_slide_html(slide: dict, palette: dict, index: int, total: int, kicker: str = "") -> str:
@@ -536,4 +633,7 @@ def build_slide_html(slide: dict, palette: dict, index: int, total: int, kicker:
     if tipo not in BUILDERS:
         raise ValueError(f"Tipo de slide desconocido: {tipo!r}")
     builder, _ = BUILDERS[tipo]
-    return _page(palette, builder(slide, palette), index, total, kicker)
+    inner = builder(slide, palette)
+    if tipo in _TIPOS_FONDO:
+        return _page_fondo(palette, slide.get("_img_data_uri", ""), inner, index, total, kicker)
+    return _page(palette, inner, index, total, kicker)

@@ -5,7 +5,7 @@ imágenes o video) con aprobación manual por Telegram antes de cada publicació
 
 ## Qué hace
 
-Cuatro formatos de contenido, elegibles desde el wizard de `/generar`:
+Cinco formatos de contenido, elegibles desde el wizard de `/generar`:
 
 - **Carrusel de imágenes** (default): un LLM (`ai_providers.py`, alterna entre
   Groq y Gemini) escribe una historia completa y la parte en slides;
@@ -20,6 +20,12 @@ Cuatro formatos de contenido, elegibles desde el wizard de `/generar`:
   cliente ni pitch — rankings y listas graciosas que mezclan herramientas de
   IA con costumbres argentinas, con un ícono pixel art generado por IA por
   cada ítem de la lista.
+- **El Error de los 30 Minutos** (`impacto_rules.py`): confesión en primera
+  persona sobre un error de negocio, seguida de una lista de acciones
+  concretas con IA (automatizar, generar impacto, atraer clientes). Cada
+  slide lleva una foto de fondo a página completa generada por IA, pensada
+  para ser vistosa y que el texto se recorte fuerte encima — es el único
+  formato que no usa el papel editorial del resto de la marca.
 
 Pipeline común:
 

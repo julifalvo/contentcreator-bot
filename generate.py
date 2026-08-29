@@ -33,14 +33,17 @@ import design
 import image_gen
 import render
 import video_narrado
-from ai_providers import generate_carousel, generate_chisme, generate_humor, generate_sabias_que, generate_video_script
+from ai_providers import (
+    generate_carousel, generate_chisme, generate_humor, generate_impacto,
+    generate_sabias_que, generate_video_script,
+)
 from config import PILLARS, RUBROS
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 # Pilares cuyo formato NO es el caso de cliente en tercera persona (llevan
 # "tema" en vez de "negocio"/"ancla"/"historia" en el JSON que devuelve la IA).
-_FORMATOS_SIN_CASO = {"humor", "sabias_que", "chisme"}
+_FORMATOS_SIN_CASO = {"humor", "sabias_que", "chisme", "impacto"}
 
 # El formato 'video narrado' (voz de ElevenLabs + b-roll de Pexels, ver
 # video_rules.py) todavía es solo para el caso serio de cliente en tercera
@@ -66,6 +69,8 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
         data = generate_sabias_que(pillar["label"], angulo, con_foto)
     elif formato == "chisme":
         data = generate_chisme(pillar["label"], angulo)
+    elif formato == "impacto":
+        data = generate_impacto(pillar["label"], angulo)
     else:
         rubro = random.choice(RUBROS)
         print(f"  Rubro: {rubro}")
@@ -89,6 +94,19 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
                 "no watermark, no logo"
             )
             slide["_img_data_uri"] = image_gen.fetch_image_data_uri(icon_prompt, width=700, height=700)
+        elif "fondo_prompt" in slide:
+            print(f"  Generando fondo llamativo: {slide['fondo_prompt'][:70]}...")
+            # A diferencia de 'prompt_imagen' (foto de acompañamiento) e
+            # 'icono_prompt' (ícono chico), esta imagen va a página completa
+            # detrás de texto grande (ver design.py _page_fondo): necesita
+            # ser dramática/vistosa por diseño para que el texto se recorte
+            # fuerte, no una foto realista neutra.
+            fondo_prompt = (
+                f"{slide['fondo_prompt']}, dramatic cinematic lighting, bold vibrant colors, "
+                "high contrast, striking eye-catching composition, professional photography, "
+                "no text, no watermark, no logo"
+            )
+            slide["_img_data_uri"] = image_gen.fetch_image_data_uri(fondo_prompt)
 
     print(f"  Renderizando {len(slides)} slides ({palette['name']})...")
     for i, slide in enumerate(slides, 1):

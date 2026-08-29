@@ -200,6 +200,14 @@ _ANGULOS_ESTILO = {
         "mundo IA (con mate incluido)' o 'Cosas que todo founder argento tiene abiertas en 47 pestañas'. "
         "Tiene que sonar a un título de lista con gancho propio, no un tema genérico."
     ),
+    "impacto": (
+        "Estos ángulos son para piezas de confesión en primera persona ('el error que cometí en mi negocio "
+        "fue no dedicar 30 minutos a esto'), seguidas de una lista de acciones concretas con IA (automatizar/"
+        "generar impacto/atraer clientes). Cada ángulo es UN ERROR puntual y accionable de 30 minutos no "
+        "invertidos: no 'no usar tecnología', sino 'no armar un agente que responda el WhatsApp fuera de "
+        "horario' o 'no automatizar el seguimiento del cliente que preguntó precio y no volvió'. Tiene que "
+        "sonar a algo que de verdad le pasó a un dueño de negocio, no una moraleja genérica."
+    ),
 }
 
 
@@ -324,7 +332,7 @@ _IMPERATIVOS = [
 ]
 
 
-_CAMPOS_EN_INGLES = {"prompt_imagen", "b_roll", "icono_prompt"}
+_CAMPOS_EN_INGLES = {"prompt_imagen", "b_roll", "icono_prompt", "fondo_prompt"}
 
 
 def normalizar(valor):

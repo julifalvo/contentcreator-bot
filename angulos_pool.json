@@ -199,5 +199,22 @@
     "Los comandos de voz que hacen que la cafetera sirva café al ritmo del tango",
     "Los rankings de IA que enumeran los chistes que más hacen reír a los devs en la madrugada",
     "Los trucos de IA para que el inbox de WhatsApp se vacíe antes de que el asado empiece"
+  ],
+  "errores_30min": [
+    "El error que cometí en mi negocio fue no dedicar 30 minutos a crear una automatización para volver a contactar a los que me pidieron presupuesto y desaparecieron.",
+    "Perdí clientes durante meses por no tomarme 30 minutos para configurar un agente que agende turnos solo mientras el local está cerrado.",
+    "Mi mayor falla fue no usar 30 minutos en cargar un agente de IA que responda precios y stock en vez de tipear la misma lista en Instagram todo el día.",
+    "El error fue no frenar 30 minutos para armar un filtro automático que identifique qué clientes tienen presupuesto antes de ponerme a armar una propuesta a medida.",
+    "Tardé un año en darme cuenta de que con 30 minutos podía automatizar el pedido de reseñas en Google a los clientes una semana después de entregar el trabajo.",
+    "Perdí horas persiguiendo comprobantes por no dedicar 30 minutos a automatizar la confirmación de recepción cuando me entra una seña por transferencia.",
+    "Mi error fue no usar 30 minutos para conectar mi base de clientes con un agente que le mande un mensaje a los que no me compran hace más de tres meses.",
+    "El error fue no tomarme 30 minutos para armar un flujo automático que le pida los datos de facturación al cliente apenas confirma la compra.",
+    "No me tomé 30 minutos para armar un agente que, al recibir “¿Cuándo entregan?”, calcule y envíe la fecha estimada según la zona y la carga del día.",
+    "Perdí tiempo porque con 30 minutos podía crear un bot que enviara al cliente, justo después de la compra, el mensaje de “Gracias, acá tenés el código de seguimiento” y evitara las preguntas de “¿Dónde está mi pedido?”.",
+    "No dediqué 30 minutos a programar un agente que, cuando alguien escribe “¿Tenés promos?”, responda con el último flyer y guarde su email para el newsletter.",
+    "Mi error fue no usar 30 minutos para configurar un flujo que, al recibir “¿Aceptan tarjetas?”, devuelva al instante los métodos de pago y el link para pagar en línea.",
+    "Dejé pasar 30 minutos que podrían haber servido para crear un bot que, si el cliente abre la cotización y no responde, le mande un video corto explicando el producto y un link de compra.",
+    "No invertí 30 minutos en montar un agente que, al cerrar la tienda, envíe automáticamente “Estamos cerrados, pero podés dejar tu pedido y lo preparamos para mañana” y registre la solicitud.",
+    "No me tomé 30 minutos para entrenar a un agente que analice las preguntas frecuentes de los últimos 30 días y genere un FAQ automático dentro de la página de contacto."
   ]
 }

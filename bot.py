@@ -58,6 +58,7 @@ _NOTAS_FORMATO = {
     "humor": "  (formato humor: situación graciosa en 2da persona, no un caso)",
     "sabias_que": "  (formato educativo: dato o concepto, sin caso ni solución puntual)",
     "chisme": "  (fun content: ranking/lista graciosa IA + cultura argenta, con íconos pixel art, sin caso ni pitch)",
+    "impacto": "  (confesión en 1ra persona de un error de negocio + lista de acciones con IA, fotos de fondo llamativas)",
 }
 
 
@@ -348,10 +349,11 @@ def _handle_wizard_callback(cq: dict) -> None:
             _lanzar_generacion_video(pillar_key, angulo)
             return
 
-        if pillar.get("formato") == "chisme":
-            # Los íconos pixel art no son opcionales acá (a diferencia de la
-            # slide 'foto' del formato caso/humor/sabías que), así que no
-            # tiene sentido preguntar "¿incluir foto IA?": se genera directo.
+        if pillar.get("formato") in ("chisme", "impacto"):
+            # Los íconos pixel art (chisme) y las fotos de fondo (impacto) no
+            # son opcionales acá (a diferencia de la slide 'foto' del formato
+            # caso/humor/sabías que), así que no tiene sentido preguntar
+            # "¿incluir foto IA?": se genera directo.
             pillar_key = _wizard["pilar_key"]
             _wizard = None
             _lanzar_generacion(pillar_key, angulo, con_foto=False)

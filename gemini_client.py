@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 import chisme_rules
 import content_rules
+import impacto_rules
 import video_rules
 
 load_dotenv()
@@ -191,6 +192,33 @@ def generate_chisme(pilar: str, angulo: str) -> dict:
             print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
 
     raise RuntimeError(f"Gemini no devolvió un carrusel 'chisme' válido tras {MAX_RETRIES} intentos: {last_error}")
+
+
+def generate_impacto(pilar: str, angulo: str) -> dict:
+    """Pide a Gemini un carrusel del formato 'impacto' (confesión en primera
+    persona sobre un error de negocio + lista de acciones con IA, con foto de
+    fondo llamativa por slide). Costo: $0 (free tier)."""
+    user = (
+        f"Pilar: {pilar}.\n"
+        f"Error puntual de 30 minutos no invertidos: {angulo}\n\n"
+        "Armá el carrusel siguiendo tu método: la portada confiesa ese error, después "
+        "3 a 6 'punto' con la acción concreta con IA que se desprende de él (mezclando "
+        "automatizar/generar impacto/atraer clientes), y el cierre con el remate."
+    )
+
+    last_error: Exception | None = None
+    for intento in range(1, MAX_RETRIES + 1):
+        payload = _post(impacto_rules.SYSTEM_PROMPT_IMPACTO, user)
+        raw = _extraer_texto(payload)
+        try:
+            data = content_rules.normalizar(json.loads(raw))
+            impacto_rules.validate(data)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
+
+    raise RuntimeError(f"Gemini no devolvió un carrusel 'impacto' válido tras {MAX_RETRIES} intentos: {last_error}")
 
 
 def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int,

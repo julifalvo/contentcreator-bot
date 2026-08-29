@@ -78,4 +78,14 @@ PILLARS = {
         "emoji": "🧉",
         "formato": "chisme",
     },
+    # Gancho de confesión en primera persona ("el error que cometí en mi
+    # negocio...") seguido de una lista de acciones concretas con IA
+    # (automatizar / generar impacto / atraer clientes). Cada slide lleva una
+    # foto de fondo a página completa generada por IA, pensada para ser
+    # llamativa y que el texto se recorte fuerte encima. Ver impacto_rules.py.
+    "errores_30min": {
+        "label": "El Error de los 30 Minutos",
+        "emoji": "⏱️",
+        "formato": "impacto",
+    },
 }
