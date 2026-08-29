@@ -10,7 +10,8 @@ Cinco formatos de contenido, elegibles desde el wizard de `/generar`:
 - **Carrusel de imágenes** (default): un LLM (`ai_providers.py`, alterna entre
   Groq y Gemini) escribe una historia completa y la parte en slides;
   `design.py`/`render.py` las renderizan a PNG (1080x1920) con Chrome headless.
-  Opcionalmente una slide puede ser una foto real generada con Pollinations.ai.
+  Opcionalmente una slide puede ser una foto real generada por IA
+  (`image_gen.py`).
 - **Humor**: mismo mecanismo, pilar con tono distinto (situación cotidiana en
   segunda persona en vez de un caso de cliente).
 - **Video narrado**: guion generado por IA (`video_rules.py`) narrado con voz
@@ -64,6 +65,12 @@ Pipeline común:
    funcionó en la cuenta, y `/metricas` muestra qué pilar y qué intención rinden
 mejor.
 
+Las imágenes de las slides (`image_gen.py`) salen de **Cloudflare Workers AI**
+con FLUX.1-schnell — gratis y sin tarjeta: 10.000 neurons por día, unas 400
+imágenes al tamaño que usa el bot. Si no está configurado, se quedó sin cuota o
+se cae, cae solo a **Pollinations.ai**, que no pide API key ni cuenta, así que
+las piezas se generan igual (con un modelo más flojo, SANA).
+
 Aparte, `scrapecreators_client.py` es una herramienta de investigación de
 competencia (perfiles/posts de TikTok) para inspirar ángulos nuevos — no es
 parte del flujo de `/generar`, se corre suelta.
@@ -86,6 +93,11 @@ Variables necesarias en `.env` (ver `.env.example` para el detalle de cada una):
 - `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `TIKTOK_REDIRECT_URI` (app en
   [TikTok for Developers](https://developers.tiktok.com/apps) con el producto
   Content Posting API).
+- Opcionales pero muy recomendados, para las imágenes:
+  `CLOUDFLARE_ACCOUNT_ID` y `CLOUDFLARE_API_TOKEN` (cuenta gratis en
+  [Cloudflare](https://dash.cloudflare.com/sign-up), token con la plantilla
+  "Workers AI"). Sin estos dos el bot funciona igual, pero las fotos las hace
+  Pollinations con un modelo bastante más flojo.
 - Opcionales, solo para el formato **video narrado**: `PEXELS_API_KEY` (b-roll,
   gratis) y `ELEVENLABS_API_KEY` (locución, free tier). Sin estas dos, el bot
   funciona igual pero ese formato no está disponible.
@@ -135,7 +147,7 @@ Desde Telegram, con el bot corriendo:
 ## Costo
 
 El carrusel (con o sin humor, con o sin foto) es 100% gratis: Groq/Gemini,
-Pollinations y el render local no piden tarjeta. El video narrado también es
+Cloudflare Workers AI, Pollinations y el render local no piden tarjeta. El video narrado también es
 gratis dentro de los free tiers de Pexels y ElevenLabs (ElevenLabs: ~10.000
 caracteres/mes). La investigación de competencia (`scrapecreators_client.py`)
 es la única pieza de pago del proyecto — no hace falta para `/generar`.

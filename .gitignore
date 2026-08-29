@@ -7,7 +7,7 @@ output/
 music/*
 !music/.gitkeep
 tiktok_tokens.json
-bot.log
+*.log
 tiktok*.txt
 *.jfif
 *.jpg
@@ -16,3 +16,4 @@ demo_tiktok_compressed.mp4
 Grabaci*.mp4
 _preview/
 _preview_real/
+prueba_imagen.png

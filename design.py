@@ -516,7 +516,7 @@ def _foto(s: dict, p: dict) -> str:
     """Slide 'foto': una imagen real (generada por IA vía image_gen.py) con
     pie de foto superpuesto. La IA de texto solo elige 'prompt_imagen'; el
     data URI ('_img_data_uri') lo agrega generate.py después de pedirle la
-    imagen a Pollinations, antes de llamar a build_slide_html — por eso no es
+    imagen al generador de imágenes, antes de llamar a build_slide_html — por eso no es
     un campo obligatorio en BUILDERS (no lo escribe la IA de texto)."""
     img = s.get("_img_data_uri", "")
     return f"""<div class="photo-card">
