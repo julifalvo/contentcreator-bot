@@ -218,7 +218,12 @@ _ANGULOS_ESTILO = {
         "Estos ángulos son para piezas educativas '¿Sabías que...?': un dato o concepto, sin caso de cliente "
         "ni solución puntual. Cada ángulo es un dato o concepto concreto e interesante sobre automatización, "
         "IA o negocios chicos: no 'la importancia de la IA', sino 'por qué la mayoría de las consultas por "
-        "WhatsApp llegan fuera del horario de atención'."
+        "WhatsApp llegan fuera del horario de atención'. "
+        "OJO con lo que el ángulo obliga a probar después: si para desarrollarlo hay que citar una cifra que "
+        "nadie puede verificar, el ángulo está mal. Nada de 'reduce el ausentismo a la mitad', 'es la "
+        "principal causa de X' ni 'el N% de los negocios': esos obligan a la pieza a inventar una estadística "
+        "o una fuente, que es exactamente lo que tiene prohibido. Apuntá a MECÁNICAS —por qué pasa lo que "
+        "pasa, cómo funciona algo por dentro, qué cambia si lo hacés al revés—, que se explican solas."
     ),
     "chisme": (
         "Estos ángulos son para piezas de puro fun content, tipo ranking/lista graciosa: sin caso de cliente "
