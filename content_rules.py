@@ -162,7 +162,9 @@ REGLAS DURAS (compartidas con el resto de la marca):
 - Voseo rioplatense siempre (perdés, tenés, escribime, contame). Nunca tú/tienes/pierdes ni español neutro.
 - PROHIBIDO inventar ofertas, precios, descuentos ("probá gratis", "50% off", "agendá una demo").
 - PROHIBIDO lenguaje de marketing vacío (revolucioná, siguiente nivel, solución integral, en la era digital, potenciá).
-- El dato tiene que sonar creíble y estar anclado en algo concreto (un cálculo simple, una observación típica del rubro) — nunca una estadística general inventada tipo "el 87% de los negocios...".
+- EL DATO NO PUEDE SER UNA ESTADÍSTICA (regla dura, es la que más se rompe): prohibido cualquier porcentaje sobre una población ("el 68% de los clientes...", "7 de cada 10 pymes...") y prohibido inventarle una fuente para que suene creíble — nada de "según una encuesta", "un estudio de 2024", "un relevamiento a 200 pymes". Si no lo podés verificar es inventado, y ponerle una fuente falsa lo empeora en vez de arreglarlo.
+- Lo que SÍ es un dato válido acá: una MECÁNICA (cómo funciona algo por dentro, por qué pasa lo que pasa), una comparación concreta, o un cálculo simple y transparente que quien mira puede rehacer en la cabeza — "si atendés 9 horas y las consultas entran hasta las 23, hay 6 horas del día en las que nadie contesta". El número sale de la cuenta que estás mostrando, no de una encuesta.
+- Si la slide "dato" lleva un número, su "detalle" explica de dónde sale la CUENTA, nunca cita un estudio.
 - Si usás un negocio como ejemplo ilustrativo, dejalo claro como ejemplo genérico (por rubro, "una peluquería" o similar) — no es EL caso de un cliente puntual con nombre e historia propia.
 
 <<GANCHO>>
@@ -344,6 +346,19 @@ _PROMESAS_EXAGERADAS = (
     "el secreto que nadie", "nadie te cuenta", "cambiar tu vida", "cambiarte la vida",
     "plata fácil", "plata facil", "sin trabajar", "en tiempo récord", "en tiempo record",
     "resultados inmediatos", "de un día para otro",
+)
+
+# Fabricar una fuente es la forma en que el pilar "sabías que" evade la regla
+# de no inventar estadísticas: el modelo sabe que no puede decir "el 87% de los
+# negocios", así que dice "según una encuesta a 200 pymes" y le suena mejor,
+# cuando en realidad es peor — el dato sigue siendo inventado y ahora encima
+# tiene una fuente falsa. Solo se chequea en "sabías que": en el formato caso
+# los números son del cliente que se está contando, no de un estudio.
+_FUENTE_INVENTADA = (
+    "encuesta", "estudio de", "un estudio", "el estudio", "relevamiento",
+    "informe de", "un informe", "sondeo", "estadísticas de", "estadisticas de",
+    "según un", "segun un", "investigación de", "investigacion de",
+    "datos de la consultora", "reporte de",
 )
 
 # Alias públicos: video_rules.py (guion narrado) valida el mismo tono/voseo
@@ -571,6 +586,17 @@ def validate_sabias_que(data: dict, con_foto: bool = False) -> None:
     neutro = [f for f in _NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
     if neutro:
         raise ValueError(f"No está en voseo rioplatense: {neutro}")
+    fuentes = [f for f in _FUENTE_INVENTADA if f in texto]
+    if fuentes:
+        raise ValueError(
+            f"Le inventó una fuente al dato: {fuentes}. Tiene que ser una mecánica "
+            "o una cuenta que quien mira pueda rehacer, no un estudio."
+        )
+    if "%" in texto or "por ciento" in texto:
+        raise ValueError(
+            "Porcentaje sobre una población: es una estadística inventada. "
+            "Usá una mecánica o un cálculo transparente."
+        )
     if len(data["caption"].split()) < 12:
         raise ValueError("El caption quedó demasiado corto")
     if not isinstance(data["hashtags"], list) or not (3 <= len(data["hashtags"]) <= 5):
