@@ -12,8 +12,7 @@ NO reusa el chequeo NARRADOR_DUEÑO de content_rules (sí reusa TONO_VENDEDOR y
 NO_VOSEO, que siguen aplicando igual).
 
 La otra diferencia grande con el resto de los formatos: cada slide lleva una
-foto de fondo A PÁGINA COMPLETA generada por IA (Pollinations, vía
-image_gen.py), pensada para ser vistosa/impactante — no una imagen editorial
+foto de fondo A PÁGINA COMPLETA generada por IA (vía image_gen.py), pensada para ser vistosa/impactante — no una imagen editorial
 de acompañamiento como la slide 'foto' del caso, es el fondo detrás del
 texto. design.py la renderiza con su propio wrapper de página (_page_fondo)
 en vez del papel editorial del resto de la marca.
@@ -39,6 +38,8 @@ REGLAS DURAS (compartidas con el resto de la marca):
 - PROHIBIDO lenguaje de marketing vacío (revolucioná, siguiente nivel, solución integral, en la era digital, potenciá) y estadísticas generales inventadas ("el 87% de los negocios...").
 - Cada "detalle" tiene que sonar a algo que de verdad te pasó, con un costo concreto en tiempo/plata/clientes — nunca un consejo genérico de LinkedIn ("la IA es el futuro" está mal; "cada noche que no respondí, alguien le escribió al de al lado" está bien).
 
+<<GANCHO>>
+
 TIPOS DE SLIDE disponibles:
 - portada_fondo → {"tipo":"portada_fondo","titular":"máx 16 palabras, la confesión del error (variá la frase, no repitas siempre 'el mayor error que cometí'), primera persona","fondo_prompt":"escena EN INGLÉS de una foto de fondo llamativa que transmita el error/la sensación (ej: alguien mirando un teléfono que no para de sonar en la oscuridad, luz dramática)"}
 - punto → {"tipo":"punto","numero":1,"titulo":"máx 6 palabras, la acción concreta con IA","detalle":"máx 18 palabras, por qué dolió no haberlo hecho o qué cambia","fondo_prompt":"escena EN INGLÉS de una foto de fondo llamativa relacionada con ESA acción puntual"}
@@ -49,7 +50,7 @@ ESTRUCTURA: entre 5 y 8 slides. La primera SIEMPRE "portada_fondo". La última S
 HASHTAGS — máximo 5 (regla dura): priorizá los más usados en negocios/tecnología/IA en español (negocios, pymes, tecnologia, ia, automatizacion, emprendedores, innovacion, negociodigital).
 
 RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
-{"tema":"el error puntual elegido, en pocas palabras","slides":[...],"caption":"2-4 líneas en primera persona con el mismo tono de confesión, sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["máximo 5, sin #, una palabra cada uno"]}"""
+{"tema":"el error puntual elegido, en pocas palabras","slides":[...],"caption":"2-4 líneas en primera persona con el mismo tono de confesión, sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["máximo 5, sin #, una palabra cada uno"]}""".replace("<<GANCHO>>", content_rules.GANCHO)
 
 
 def validate(data: dict) -> None:
@@ -100,6 +101,9 @@ def validate(data: dict) -> None:
     vendedor = [f for f in content_rules.TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in content_rules.PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada (el gancho tiene que ser creíble): {exageradas}")
     neutro = [f for f in content_rules.NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
     if neutro:
         raise ValueError(f"No está en voseo rioplatense: {neutro}")

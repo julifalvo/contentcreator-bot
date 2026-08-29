@@ -7,7 +7,7 @@ divergir la primera vez que se ajuste una regla en uno y no en el otro.
 
 import re
 
-# La slide 'foto' (imagen real vía Pollinations.ai) es opcional: la calidad de
+# La slide 'foto' (imagen real, vía image_gen.py) es opcional: la calidad de
 # un generador de imágenes gratis y sin curar es despareja (a veces sale una
 # escena genérica que no cuenta nada, sin nadie en cuadro) y quien usa el bot
 # tiene que poder elegir si la quiere o no en cada pieza — por eso el bloque
@@ -18,6 +18,22 @@ _FOTO_ESTRUCTURA_CASO = ' "foto" es opcional, sumala solo si un momento puntual 
 
 _FOTO_TIPO_HUMOR = '- foto    → {"tipo":"foto","titular":"máx 8 palabras, el pie de foto, liviano/gracioso","prompt_imagen":"descripción visual en INGLÉS para un generador de imágenes: escena cotidiana fotorrealista y reconocible (ej: \'a tired small business owner checking phone late at night behind a counter, realistic photo\'), sin texto ni letras en la imagen"}\n'
 _FOTO_LISTA_HUMOR = ', "foto"'
+
+# Reglas del GANCHO: los primeros 2 segundos son lo único que decide si la
+# pieza se ve o se pasa de largo, y hasta ahora el prompt solo decía "el
+# gancho: lo que está perdiendo HOY" — con eso el modelo escribía titulares
+# correctos pero cerrados, que se entienden enteros de una y no dejan nada por
+# averiguar. Este bloque es compartido: lo insertan también chisme_rules,
+# impacto_rules y video_rules, para que el criterio de gancho sea el mismo en
+# los cinco formatos.
+GANCHO = """GANCHO — LOS PRIMEROS 2 SEGUNDOS (la portada, o la primera escena si es video, se juega todo acá):
+- El titular tiene que abrir una pregunta en la cabeza de quien mira: algo que reconoce como propio pero cuyo desenlace todavía no sabe. Si al leerlo ya sabe cómo sigue, no hay ninguna razón para deslizar ni para quedarse.
+- Arrancá por lo concreto y observable —una escena, una hora, un objeto, una cifra chica—, nunca por el tema ni por la categoría ("la importancia de la IA", "la automatización llegó").
+- Se lee en menos de 2 segundos: frase corta, sin subordinadas, sin preámbulo. Lo que más pica va en las primeras palabras, no en el remate.
+- La urgencia sale de algo que YA está pasando y se puede perder (mensajes sin responder, el que preguntó y no volvió, el de al lado que sí contesta), nunca de una amenaza inventada ni de un "no te quedes atrás".
+- PROHIBIDAS las promesas exageradas: nada de "sin esfuerzo", "de la noche a la mañana", "duplicá tus ventas", "resultados garantizados", "x10", "para siempre", "el secreto que nadie te cuenta". Una promesa que no se cree hace deslizar igual que un titular aburrido.
+- Nada de clickbait que la pieza no paga: lo que el gancho insinúa tiene que estar resuelto adentro."""
+
 
 _SYSTEM_PROMPT_TEMPLATE = """Armás carruseles para TikTok para rootbusinessai, una agencia que construye agentes de IA y automatizaciones para negocios chicos de Argentina. Contás casos reales de clientes, no vendés un curso.
 
@@ -55,6 +71,8 @@ VOZ NARRATIVA — tercera persona, caso de agencia (regla dura):
 
 PROHIBIDO ADEMÁS: lenguaje de marketing vacío (revolucioná, llevá tu negocio al siguiente nivel, en la era digital, no te quedes atrás, potenciá, solución integral), superlativos huecos, estadísticas generales inventadas ("el 87% de los negocios..."), y amenazas catastróficas. Los números son del caso ilustrativo que estás contando.
 
+<<GANCHO>>
+
 TIPOS DE SLIDE disponibles (elegí los que le sirvan a TU historia):
 - portada  → {"tipo":"portada","titular":"máx 9 palabras, el gancho: lo que está perdiendo HOY, en segunda persona","epigrafe":"1 oración que ubica la escena"}
 - texto    → {"tipo":"texto","titular":"máx 6 palabras","cuerpo":"2 oraciones que avanzan el relato"}
@@ -78,6 +96,7 @@ RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
 def get_system_prompt(con_foto: bool = False) -> str:
     return (
         _SYSTEM_PROMPT_TEMPLATE
+        .replace("<<GANCHO>>", GANCHO)
         .replace("<<FOTO_TIPO>>", _FOTO_TIPO_CASO if con_foto else "")
         .replace("<<FOTO_ESTRUCTURA>>", _FOTO_ESTRUCTURA_CASO if con_foto else "")
     )
@@ -100,6 +119,8 @@ REGLAS DURAS (no negociables, se comparten con el resto de la marca):
 - Es humor sobre una situación cotidiana real, nunca un chiste a costa del cliente ni humor negro.
 - El remate SIEMPRE conecta con lo que resuelve la agencia, pero como guiño liviano, no como pitch de venta.
 
+<<GANCHO>>
+
 TIPOS DE SLIDE disponibles (elegí los que le sirvan a TU secuencia):
 - portada → {"tipo":"portada","titular":"máx 9 palabras, el gancho de la situación, en segunda persona","epigrafe":"1 oración liviana que ubica la escena"}
 - texto   → {"tipo":"texto","titular":"máx 6 palabras (ej: la hora, o un mini-título del momento)","cuerpo":"1-2 oraciones que describen ESE momento puntual"}
@@ -119,6 +140,7 @@ RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
 def get_humor_system_prompt(con_foto: bool = False) -> str:
     return (
         _HUMOR_SYSTEM_PROMPT_TEMPLATE
+        .replace("<<GANCHO>>", GANCHO)
         .replace("<<FOTO_TIPO>>", _FOTO_TIPO_HUMOR if con_foto else "")
         .replace("<<FOTO_LISTA>>", _FOTO_LISTA_HUMOR if con_foto else "")
     )
@@ -143,6 +165,8 @@ REGLAS DURAS (compartidas con el resto de la marca):
 - El dato tiene que sonar creíble y estar anclado en algo concreto (un cálculo simple, una observación típica del rubro) — nunca una estadística general inventada tipo "el 87% de los negocios...".
 - Si usás un negocio como ejemplo ilustrativo, dejalo claro como ejemplo genérico (por rubro, "una peluquería" o similar) — no es EL caso de un cliente puntual con nombre e historia propia.
 
+<<GANCHO>>
+
 TIPOS DE SLIDE disponibles (elegí los que le sirvan a TU dato):
 - portada → {"tipo":"portada","titular":"máx 9 palabras, arranca con '¿Sabías que...?' o una variante, el gancho del dato","epigrafe":"1 oración que lo ubica"}
 - texto   → {"tipo":"texto","titular":"máx 6 palabras","cuerpo":"2 oraciones que desarrollan el dato"}
@@ -163,6 +187,7 @@ RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
 def get_sabias_que_system_prompt(con_foto: bool = False) -> str:
     return (
         _SABIAS_QUE_SYSTEM_PROMPT_TEMPLATE
+        .replace("<<GANCHO>>", GANCHO)
         .replace("<<FOTO_TIPO>>", _FOTO_TIPO_SABIAS_QUE if con_foto else "")
         .replace("<<FOTO_LISTA>>", _FOTO_LISTA_SABIAS_QUE if con_foto else "")
     )
@@ -303,12 +328,31 @@ _NO_VOSEO = (
     "elegis", "preferis", "repetis",
 )
 
+# Promesas exageradas: el otro modo de fallar un gancho. El tono vendedor de
+# arriba es el del SaaS con free trial; esto es el del gurú de reels. Ninguna
+# de estas frases se puede sostener con el caso de un cliente, y todas hacen
+# que la pieza se lea como publicidad y se pase de largo. Solo formas
+# inequívocas: "duplicá tus" entra, "duplicó los turnos" no — esa segunda es
+# el resultado real de un caso, que sí se puede contar.
+_PROMESAS_EXAGERADAS = (
+    "sin esfuerzo", "sin mover un dedo", "de la noche a la mañana", "de un día para el otro",
+    "garantizado", "garantizada", "resultados asegurados", "te lo aseguro",
+    "duplicá tus", "duplica tus", "triplicá tus", "triplica tus",
+    "multiplicá tus", "multiplica tus", "x10", "10x",
+    "100% automático", "100% automatico", "totalmente automático", "totalmente automatico",
+    "nunca más vas a", "nunca mas vas a", "para siempre",
+    "el secreto que nadie", "nadie te cuenta", "cambiar tu vida", "cambiarte la vida",
+    "plata fácil", "plata facil", "sin trabajar", "en tiempo récord", "en tiempo record",
+    "resultados inmediatos", "de un día para otro",
+)
+
 # Alias públicos: video_rules.py (guion narrado) valida el mismo tono/voseo
 # que los carruseles, pero no tiene slides ni caption en el mismo formato, así
 # que arma su propio validate() reusando estas listas en vez de duplicarlas.
 TONO_VENDEDOR = _TONO_VENDEDOR
 NARRADOR_DUEÑO = _NARRADOR_DUEÑO
 NO_VOSEO = _NO_VOSEO
+PROMESAS_EXAGERADAS = _PROMESAS_EXAGERADAS
 
 
 # Imperativos en tú que aparecen sobre todo en botones y titulares de la slide
@@ -407,6 +451,9 @@ def validate(data: dict, con_foto: bool = False) -> None:
     vendedor = [f for f in _TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in _PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada (el gancho tiene que ser creíble): {exageradas}")
     dueño = [f for f in _NARRADOR_DUEÑO if f in texto]
     if dueño:
         raise ValueError(f"Narrador hablando como dueño del negocio, no como agencia: {dueño}")
@@ -464,6 +511,9 @@ def validate_humor(data: dict, con_foto: bool = False) -> None:
     vendedor = [f for f in _TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in _PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada (el gancho tiene que ser creíble): {exageradas}")
     neutro = [f for f in _NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
     if neutro:
         raise ValueError(f"No está en voseo rioplatense: {neutro}")
@@ -515,6 +565,9 @@ def validate_sabias_que(data: dict, con_foto: bool = False) -> None:
     vendedor = [f for f in _TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in _PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada (el gancho tiene que ser creíble): {exageradas}")
     neutro = [f for f in _NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
     if neutro:
         raise ValueError(f"No está en voseo rioplatense: {neutro}")

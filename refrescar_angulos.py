@@ -5,6 +5,12 @@ por pilar, evitando repetir los que ya están.
 Esta es la forma de "agregar más ángulos" ahora: correr este script de vez en
 cuando, no editar config.py a mano.
 
+A la IA se le pasan dos cosas más que la lista de lo que ya hay: el perfil de
+la audiencia (audiencia.py — problemas, deseos, miedos, preguntas y objeciones
+reales) para que cada ángulo nazca de un punto concreto y no de la intuición
+del modelo, y las intenciones que soporta el pilar, para que el lote no salga
+entero servible para una sola cosa.
+
 Antes de pedirlos consulta las métricas reales de la cuenta (rendimiento.py:
 vistas de TikTok cruzadas con el pilar y el ángulo que generó cada pieza) y se
 las pasa a la IA, así los ángulos nuevos empujan hacia lo que de verdad
@@ -35,6 +41,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import angulos
+import audiencia
 import rendimiento
 import tiktok_client
 from ai_providers import generate_angulos
@@ -74,7 +81,8 @@ def _refrescar_pilar(pillar_key: str, n: int, metricas: list[dict]) -> None:
     guia = " · guiado por métricas" if bloque else ""
     print(f"→ {pillar['label']} ({len(existentes)} ya en el pool{guia})...")
     try:
-        data = generate_angulos(pillar["label"], formato, existentes, n, bloque or None)
+        data = generate_angulos(pillar["label"], formato, existentes, n, bloque or None,
+                                audiencia.bloque_para_angulos(pillar_key))
     except Exception as e:
         print(f"  ✗ Falló: {e}")
         return

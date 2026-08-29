@@ -1,13 +1,13 @@
 """Cruza las métricas reales de TikTok (tiktok_metrics.py) con las piezas que
-generó el bot (output/*/contenido.json) para saber qué PILAR y qué ÁNGULO
-funcionaron, no solo qué video anduvo bien.
+generó el bot (output/*/contenido.json) para saber qué PILAR, qué ÁNGULO y con
+qué INTENCIÓN funcionaron, no solo qué video anduvo bien.
 
 El problema: la Display API de TikTok no devuelve ninguna etiqueta nuestra,
 solo id, descripción y números. La solución: cada pieza que genera el bot
-guarda en su carpeta de output/ el pilar, el ángulo y el caption exacto que
-después se sube como descripción — así que emparejando la descripción del
-video publicado contra los captions locales se recupera la atribución sin
-tener que llevar una base de datos aparte.
+guarda en su carpeta de output/ el pilar, el ángulo, la intención y el caption
+exacto que después se sube como descripción — así que emparejando la
+descripción del video publicado contra los captions locales se recupera la
+atribución sin tener que llevar una base de datos aparte.
 
 El emparejamiento es por similitud y no por igualdad: TikTok le agrega los
 hashtags al final de la descripción, a veces el caption se retoca a mano
@@ -28,7 +28,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 import tiktok_metrics
-from config import PILLARS
+from config import INTENCIONES, PILLARS
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
@@ -69,6 +69,10 @@ def piezas_locales() -> list[dict]:
             "carpeta": path.parent.name,
             "pilar": pilar,
             "angulo": data.get("angulo") or "",
+            # Las piezas anteriores a que existieran las intenciones (config.py)
+            # no la traen: quedan en None y por_intencion() las saltea, igual
+            # que ya pasa con las piezas viejas sin pilar.
+            "intencion": data.get("intencion"),
             "formato": data.get("formato") or "",
             "_caption_norm": _normalizar(caption),
         })
@@ -88,7 +92,7 @@ def _mejor_match(descripcion: str, piezas: list[dict]) -> dict | None:
 
 
 def atribuir(videos: list[dict], piezas: list[dict] | None = None) -> list[dict]:
-    """Le suma a cada video publicado el pilar y el ángulo que lo generaron,
+    """Le suma a cada video publicado el pilar, el ángulo y la intención que lo generaron,
     cuando se pudo emparejar (quedan en None si no: videos subidos a mano,
     piezas viejas sin pilar guardado, o captions editados de más)."""
     piezas = piezas_locales() if piezas is None else piezas
@@ -99,6 +103,7 @@ def atribuir(videos: list[dict], piezas: list[dict] | None = None) -> list[dict]
             **v,
             "pilar": pieza["pilar"] if pieza else None,
             "angulo": pieza["angulo"] if pieza else None,
+            "intencion": pieza["intencion"] if pieza else None,
             "carpeta": pieza["carpeta"] if pieza else None,
         })
     return atribuidos
@@ -129,6 +134,31 @@ def por_pilar(atribuidos: list[dict]) -> list[dict]:
             "vistas_mediana": statistics.median(vistas),
             "vistas_total": sum(vistas),
             "mejor": max(vs, key=lambda v: v.get("view_count", 0)),
+        })
+    return sorted(filas, key=lambda f: f["vistas_mediana"], reverse=True)
+
+
+def por_intencion(atribuidos: list[dict]) -> list[dict]:
+    """Lo mismo que por_pilar() pero cortando por PARA QUÉ estaba hecha la
+    pieza (educativo/emocional/conexión/venta, ver config.INTENCIONES). Es el
+    corte que dice si la cuenta está enganchando y no vendiendo, o al revés:
+    el pilar dice de qué se habló, la intención dice qué se esperaba que
+    pasara. Mediana por la misma razón que en por_pilar()."""
+    por_clave: dict[str, list[dict]] = {}
+    for v in atribuidos:
+        if v.get("intencion"):
+            por_clave.setdefault(v["intencion"], []).append(v)
+
+    filas = []
+    for intencion, vs in por_clave.items():
+        vistas = [v.get("view_count", 0) for v in vs]
+        filas.append({
+            "intencion": intencion,
+            "label": INTENCIONES.get(intencion, {}).get("label", intencion),
+            "emoji": INTENCIONES.get(intencion, {}).get("emoji", "•"),
+            "piezas": len(vs),
+            "vistas_mediana": statistics.median(vistas),
+            "vistas_total": sum(vistas),
         })
     return sorted(filas, key=lambda f: f["vistas_mediana"], reverse=True)
 

@@ -110,7 +110,16 @@ def _post_con_espera(system: str, user: str, max_esperas: int = 4) -> requests.R
     raise RuntimeError("Groq siguió rechazando por límite de tokens tras varias esperas.")
 
 
-def generate_carousel(pilar: str, angulo: str, rubro: str, con_foto: bool = False) -> dict:
+def _sumar_contexto(user: str, contexto: str | None) -> str:
+    """Le pega al mensaje el contexto estratégico de ESTA pieza: para qué está
+    hecha (intención) y contra qué tensión de la audiencia se escribe (ver
+    audiencia.py). Va en el mensaje del usuario y no en el system prompt
+    porque cambia en cada pedido — el system prompt es lo que no cambia
+    nunca, y mezclarlos rompería el caché de prompt de los proveedores."""
+    return f"{user}\n\n{contexto}" if contexto else user
+
+
+def generate_carousel(pilar: str, angulo: str, rubro: str, con_foto: bool = False, contexto: str | None = None) -> dict:
     """Pide a Groq un carrusel completo y coherente. Costo: $0 (free tier)."""
     user = (
         f"Pilar: {pilar}.\n"
@@ -119,6 +128,7 @@ def generate_carousel(pilar: str, angulo: str, rubro: str, con_foto: bool = Fals
         "Armá el carrusel siguiendo tu método: primero el ancla, después la "
         "historia completa, y recién ahí las slides."
     )
+    user = _sumar_contexto(user, contexto)
     system = content_rules.get_system_prompt(con_foto)
 
     last_error: Exception | None = None
@@ -136,7 +146,7 @@ def generate_carousel(pilar: str, angulo: str, rubro: str, con_foto: bool = Fals
     raise RuntimeError(f"Groq no devolvió un carrusel válido tras {MAX_RETRIES} intentos: {last_error}")
 
 
-def generate_humor(pilar: str, angulo: str, con_foto: bool = False) -> dict:
+def generate_humor(pilar: str, angulo: str, con_foto: bool = False, contexto: str | None = None) -> dict:
     """Pide a Groq un carrusel de humor situacional (segunda persona, sin caso
     de cliente). Costo: $0 (free tier)."""
     user = (
@@ -145,6 +155,7 @@ def generate_humor(pilar: str, angulo: str, con_foto: bool = False) -> dict:
         "Armá el carrusel siguiendo tu método: elegí el momento cómico concreto "
         "y armá la secuencia de slides que lo cuenta, hablándole directo a quien mira."
     )
+    user = _sumar_contexto(user, contexto)
     system = content_rules.get_humor_system_prompt(con_foto)
 
     last_error: Exception | None = None
@@ -162,7 +173,7 @@ def generate_humor(pilar: str, angulo: str, con_foto: bool = False) -> dict:
     raise RuntimeError(f"Groq no devolvió un carrusel de humor válido tras {MAX_RETRIES} intentos: {last_error}")
 
 
-def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False) -> dict:
+def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False, contexto: str | None = None) -> dict:
     """Pide a Groq un carrusel educativo '¿Sabías que...?' (sin caso de
     cliente, sin solución puntual). Costo: $0 (free tier)."""
     user = (
@@ -171,6 +182,7 @@ def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False) -> dict
         "Armá el carrusel siguiendo tu método: elegí el dato concreto y "
         "armá las slides que lo desarrollan, sin plantear un caso ni una solución puntual."
     )
+    user = _sumar_contexto(user, contexto)
     system = content_rules.get_sabias_que_system_prompt(con_foto)
 
     last_error: Exception | None = None
@@ -188,7 +200,7 @@ def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False) -> dict
     raise RuntimeError(f"Groq no devolvió un carrusel 'sabías que' válido tras {MAX_RETRIES} intentos: {last_error}")
 
 
-def generate_chisme(pilar: str, angulo: str) -> dict:
+def generate_chisme(pilar: str, angulo: str, contexto: str | None = None) -> dict:
     """Pide a Groq un carrusel de puro fun content (formato 'chisme': ranking/
     lista graciosa que mezcla IA/tech con costumbres argentinas, con ícono
     pixel art por ítem). Costo: $0 (free tier)."""
@@ -198,6 +210,7 @@ def generate_chisme(pilar: str, angulo: str) -> dict:
         "Armá el carrusel siguiendo tu método: elegí entre 3 y 6 ítems para ESE "
         "concepto, con su nombre, comentario gracioso e icono_prompt cada uno."
     )
+    user = _sumar_contexto(user, contexto)
 
     last_error: Exception | None = None
     for intento in range(1, MAX_RETRIES + 1):
@@ -214,7 +227,7 @@ def generate_chisme(pilar: str, angulo: str) -> dict:
     raise RuntimeError(f"Groq no devolvió un carrusel 'chisme' válido tras {MAX_RETRIES} intentos: {last_error}")
 
 
-def generate_impacto(pilar: str, angulo: str) -> dict:
+def generate_impacto(pilar: str, angulo: str, contexto: str | None = None) -> dict:
     """Pide a Groq un carrusel del formato 'impacto' (confesión en primera
     persona sobre un error de negocio + lista de acciones con IA, con foto de
     fondo llamativa por slide). Costo: $0 (free tier)."""
@@ -225,6 +238,7 @@ def generate_impacto(pilar: str, angulo: str) -> dict:
         "3 a 6 'punto' con la acción concreta con IA que se desprende de él (mezclando "
         "automatizar/generar impacto/atraer clientes), y el cierre con el remate."
     )
+    user = _sumar_contexto(user, contexto)
 
     last_error: Exception | None = None
     for intento in range(1, MAX_RETRIES + 1):
@@ -242,7 +256,7 @@ def generate_impacto(pilar: str, angulo: str) -> dict:
 
 
 def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int,
-                     rendimiento: str | None = None) -> dict:
+                     rendimiento: str | None = None, contexto: str | None = None) -> dict:
     """Pide a Groq `n` ángulos nuevos para `pilar`, evitando repetir
     `existentes`. Usado por refrescar_angulos.py para ampliar el pool sin
     tocar código. `rendimiento` es el bloque opcional con las métricas reales
@@ -256,6 +270,7 @@ def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: 
         f"Ángulos ya existentes (no los repitas ni los parafrasees):\n{lista_existentes}\n\n"
         f"Generá {n} ángulos nuevos."
     )
+    user = _sumar_contexto(user, contexto)
     system = content_rules.get_angulos_system_prompt(formato, con_rendimiento=bool(rendimiento))
 
     last_error: Exception | None = None
@@ -273,7 +288,7 @@ def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: 
     raise RuntimeError(f"Groq no devolvió ángulos válidos tras {MAX_RETRIES} intentos: {last_error}")
 
 
-def generate_video_script(pilar: str, angulo: str, rubro: str) -> dict:
+def generate_video_script(pilar: str, angulo: str, rubro: str, contexto: str | None = None) -> dict:
     """Pide a Groq el guion de un video narrado (formato con voz en off real,
     ver video_rules.py). Costo: $0 (free tier)."""
     user = (
@@ -283,6 +298,7 @@ def generate_video_script(pilar: str, angulo: str, rubro: str) -> dict:
         "Armá el guion siguiendo tu método: primero el ancla, después la "
         "historia completa, y recién ahí las escenas."
     )
+    user = _sumar_contexto(user, contexto)
 
     last_error: Exception | None = None
     for intento in range(1, MAX_RETRIES + 1):

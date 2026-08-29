@@ -47,30 +47,31 @@ def _con_fallback(nombre_metodo: str, *args) -> dict:
     raise RuntimeError(f"Ningún proveedor de IA pudo generar la pieza: {last_error}")
 
 
-def generate_carousel(pilar: str, angulo: str, rubro: str, con_foto: bool = False) -> dict:
-    return _con_fallback("generate_carousel", pilar, angulo, rubro, con_foto)
+def generate_carousel(pilar: str, angulo: str, rubro: str, con_foto: bool = False,
+                      contexto: str | None = None) -> dict:
+    return _con_fallback("generate_carousel", pilar, angulo, rubro, con_foto, contexto)
 
 
-def generate_humor(pilar: str, angulo: str, con_foto: bool = False) -> dict:
-    return _con_fallback("generate_humor", pilar, angulo, con_foto)
+def generate_humor(pilar: str, angulo: str, con_foto: bool = False, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_humor", pilar, angulo, con_foto, contexto)
 
 
-def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False) -> dict:
-    return _con_fallback("generate_sabias_que", pilar, angulo, con_foto)
+def generate_sabias_que(pilar: str, angulo: str, con_foto: bool = False, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_sabias_que", pilar, angulo, con_foto, contexto)
 
 
-def generate_chisme(pilar: str, angulo: str) -> dict:
-    return _con_fallback("generate_chisme", pilar, angulo)
+def generate_chisme(pilar: str, angulo: str, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_chisme", pilar, angulo, contexto)
 
 
-def generate_impacto(pilar: str, angulo: str) -> dict:
-    return _con_fallback("generate_impacto", pilar, angulo)
+def generate_impacto(pilar: str, angulo: str, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_impacto", pilar, angulo, contexto)
 
 
-def generate_video_script(pilar: str, angulo: str, rubro: str) -> dict:
-    return _con_fallback("generate_video_script", pilar, angulo, rubro)
+def generate_video_script(pilar: str, angulo: str, rubro: str, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_video_script", pilar, angulo, rubro, contexto)
 
 
 def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int,
-                     rendimiento: str | None = None) -> dict:
-    return _con_fallback("generate_angulos", pilar, formato, existentes, n, rendimiento)
+                     rendimiento: str | None = None, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_angulos", pilar, formato, existentes, n, rendimiento, contexto)

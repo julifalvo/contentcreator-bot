@@ -3,8 +3,8 @@
 mezclan herramientas del mundo IA/tech con costumbres argentinas — ej.
 "Esenciales 2026 para sobrevivir al mundo IA (con mate incluido)".
 
-Cada ítem de la lista lleva un ícono pixel art generado por IA (Pollinations,
-vía image_gen.py) además del texto — a diferencia de la slide 'foto' del
+Cada ítem de la lista lleva un ícono pixel art generado por IA (vía
+image_gen.py) además del texto — a diferencia de la slide 'foto' del
 formato caso, acá el ícono no es opcional: es el centro visual de cada slide.
 
 Es un formato aparte, como video_rules.py: reusa las reglas de tono/voseo
@@ -32,6 +32,8 @@ REGLAS DURAS (compartidas con el resto de la marca):
 - Cada "detalle" tiene que tener gracia o ingenio propio, no ser una definición de manual ("Mate: infusión tradicional argentina" está mal; "Mate: la única API que nunca te tira rate limit" está bien).
 - Nada de humor a costa de una persona, grupo o marca puntual — la mezcla IA+argentinidad es sobre situaciones y objetos, no chistes personales.
 
+<<GANCHO>>
+
 TIPOS DE SLIDE disponibles:
 - portada → {"tipo":"portada","titular":"máx 9 palabras, el gancho de la lista/ranking","epigrafe":"1 oración liviana que ubica el concepto"}
 - item    → {"tipo":"item","nombre":"máx 4 palabras, el objeto/herramienta/costumbre","detalle":"el comentario gracioso o ingenioso, máx 14 palabras","icono_prompt":"descripción EN INGLÉS de un ícono pixel art de ESE objeto puntual, un solo objeto centrado, sin texto ni logos"}
@@ -42,7 +44,7 @@ ESTRUCTURA: entre 5 y 8 slides. La primera SIEMPRE "portada". La última SIEMPRE
 HASHTAGS — máximo 5 (regla dura): mezclá tags de IA/tecnología (ia, tecnologia, automatizacion) con tags de humor/cultura argenta (humor, argentina, mate, viral) según aplique a ESTA pieza puntual.
 
 RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
-{"tema":"el concepto de lista/ranking elegido, en pocas palabras","slides":[...],"caption":"2-4 líneas con el mismo tono liviano, sin hashtags adentro, termina invitando a comentar qué le sumarías vos a la lista","hashtags":["máximo 5, sin #, una palabra cada uno"]}"""
+{"tema":"el concepto de lista/ranking elegido, en pocas palabras","slides":[...],"caption":"2-4 líneas con el mismo tono liviano, sin hashtags adentro, termina invitando a comentar qué le sumarías vos a la lista","hashtags":["máximo 5, sin #, una palabra cada uno"]}""".replace("<<GANCHO>>", content_rules.GANCHO)
 
 
 def validate(data: dict) -> None:
@@ -89,6 +91,9 @@ def validate(data: dict) -> None:
     vendedor = [f for f in content_rules.TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in content_rules.PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada (el gancho tiene que ser creíble): {exageradas}")
     neutro = [f for f in content_rules.NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
     if neutro:
         raise ValueError(f"No está en voseo rioplatense: {neutro}")

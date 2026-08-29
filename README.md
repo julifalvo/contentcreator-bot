@@ -35,6 +35,18 @@ Pipeline común:
    queda sin cuota. Los ángulos no están hardcodeados: salen del pool en
    `angulos_pool.json` (`angulos.py`), que se amplía corriendo
    `refrescar_angulos.py`.
+
+   Antes de pedir el texto, la pieza recibe su **contexto estratégico**
+   (`audiencia.py`): una **intención** sorteada entre las que soporta el pilar
+   — educativo, emocional, de conexión o de venta (`config.INTENCIONES`) — y
+   una **tensión** puntual de la audiencia (un problema, un deseo, un miedo,
+   una pregunta y una objeción reales de un dueño de negocio chico). El ángulo
+   define de qué habla la pieza; la intención, para qué está hecha; la tensión,
+   contra qué se escribe. Por eso el mismo ángulo no rinde siempre la misma
+   pieza. Las reglas del **gancho** (los primeros 2 segundos: abrir curiosidad
+   sin prometer de más) viven en `content_rules.GANCHO` y las comparten los
+   cinco formatos; las promesas exageradas se rechazan en la validación, igual
+   que el tono de vendedor o el español neutro.
 2. **Aprobación** (`telegram_client.py`): la vista previa (imágenes o video +
    caption) se manda a un chat de Telegram y espera un botón de
    aprobar/cancelar antes de publicar nada.
@@ -45,11 +57,12 @@ Pipeline común:
    `/metricas`, `/ayuda`), sin tocar la terminal.
 5. **Realimentación** (`tiktok_metrics.py` + `rendimiento.py`): se traen las
    vistas reales de lo ya publicado (Display API de TikTok) y se cruzan con
-   el pilar y el ángulo que generó cada pieza — el caption guardado en
+   el pilar, el ángulo y la intención que generaron cada pieza — el caption guardado en
    `output/*/contenido.json` es el que se subió, así que emparejarlo con la
    descripción del video devuelve la atribución. Con eso, los ángulos nuevos
    que inventa `refrescar_angulos.py` salen empujados hacia lo que de verdad
-   funcionó en la cuenta, y `/metricas` muestra qué pilar rinde mejor.
+   funcionó en la cuenta, y `/metricas` muestra qué pilar y qué intención rinden
+mejor.
 
 Aparte, `scrapecreators_client.py` es una herramienta de investigación de
 competencia (perfiles/posts de TikTok) para inspirar ángulos nuevos — no es
@@ -102,9 +115,11 @@ python refrescar_angulos.py humor --n 25      # solo ese pilar, pidiendo más
 ```
 
 `refrescar_angulos.py` es la forma de sumar ideas: en vez de editar
-`config.py`, la IA inventa ángulos nuevos evitando repetir los que ya están
-y guiándose por las métricas reales de la cuenta (con `--sin-metricas` no
-consulta TikTok).
+`config.py`, la IA inventa ángulos nuevos evitando repetir los que ya están,
+guiándose por las métricas reales de la cuenta (con `--sin-metricas` no
+consulta TikTok) y por el perfil de audiencia de `audiencia.py`, para que cada
+ángulo nazca de un problema, un miedo o una objeción concretos y el lote quede
+repartido entre las intenciones que soporta el pilar.
 
 Desde Telegram, con el bot corriendo:
 
@@ -112,8 +127,8 @@ Desde Telegram, con el bot corriendo:
 /generar            abre un wizard: formato -> pilar -> ángulo -> ¿foto IA?
 /generar [pilar]     atajo rápido: carrusel con ese pilar, ángulo y rubro al azar
 /publicar           manda a aprobar la última pieza generada (sin regenerar)
-/pilares             lista los pilares de contenido disponibles
-/metricas           seguidores, top 5 por vistas y rendimiento por pilar
+/pilares             lista los pilares y con qué intención se cuenta cada uno
+/metricas           seguidores, top 5 por vistas y rendimiento por pilar e intención
 /ayuda               este mensaje
 ```
 

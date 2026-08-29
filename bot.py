@@ -13,8 +13,8 @@ Dejalo corriendo (python bot.py) y desde el chat de Telegram mandale:
 El wizard de /generar (ver _iniciar_wizard / _handle_wizard_callback) deja
 elegir el formato (carrusel de imágenes o video narrado con voz de ElevenLabs
 + b-roll de Pexels), el pilar, el ángulo puntual, y — solo para carrusel — si
-la pieza incluye o no una foto generada por IA (Pollinations.ai: gratis pero
-de calidad pareja, así que es opt-in en vez de automático). El formato video
+la pieza incluye o no una foto generada por IA (gratis, ver image_gen.py,
+pero de calidad despareja, así que es opt-in en vez de automático). El formato video
 no está disponible para el pilar humor todavía.
 
 El texto completo de /ayuda (y la lista de /pilares) se arma solo a partir de
@@ -48,7 +48,7 @@ import rendimiento
 import telegram_client
 import tiktok_client
 import tiktok_metrics
-from config import PILLARS
+from config import INTENCIONES, PILLARS, intenciones_de
 from generate import PILARES_VIDEO, build_piece, build_video_piece
 
 ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -65,11 +65,15 @@ _NOTAS_FORMATO = {
 def _pilares_listado() -> str:
     """Lista de pilares con emoji y label, sacada de config.PILLARS. Los que
     usan un formato distinto al caso de cliente en tercera persona se marcan
-    aparte, para que quien elige sepa de entrada qué va a salir."""
+    aparte, para que quien elige sepa de entrada qué va a salir. Al final de
+    cada línea van las intenciones que ese pilar puede tomar: no se eligen en
+    el wizard (se sortean por pieza, ver audiencia.py), pero saberlas explica
+    por qué dos piezas del mismo pilar salen tan distintas."""
     lineas = []
     for key, p in PILLARS.items():
         nota = _NOTAS_FORMATO.get(p.get("formato"), "")
-        lineas.append(f"- {key} {p.get('emoji', '')} — {p['label']}{nota}")
+        intenciones = " / ".join(INTENCIONES[i]["label"].lower() for i in intenciones_de(key))
+        lineas.append(f"- {key} {p.get('emoji', '')} — {p['label']}{nota}\n    intención: {intenciones}")
     return "\n".join(lineas)
 
 
@@ -197,6 +201,17 @@ def _enviar_a_aprobar(folder) -> None:
     # 'formato' en su contenido.json: son todas carrusel.
     formato = content.get("formato", "carrusel")
 
+    # La ficha va aparte y no pegada al caption: el caption de este mensaje es
+    # exactamente el texto que se publica si aprobás, así que meterle la
+    # intención adentro la subiría a TikTok.
+    intencion = content.get("intencion")
+    if intencion in INTENCIONES:
+        ficha = INTENCIONES[intencion]
+        telegram_client.send_message(
+            f"{ficha['emoji']} Intención: {ficha['label']} — {ficha['resumen']}\n"
+            f"Ángulo: {content.get('angulo', '?')}"
+        )
+
     if formato == "video":
         video_path = folder / "video.mp4"
         message_id = telegram_client.send_video_preview(video_path, caption)
@@ -287,6 +302,16 @@ def _handle_metricas() -> None:
                 f"- {PILLARS.get(f['pilar'], {}).get('emoji', '•')} {f['label']}: {f['vistas_mediana']:.0f} vistas medianas "
                 f"({f['piezas']} pieza{'s' if f['piezas'] != 1 else ''}, {f['vistas_total']} en total)"
             )
+    filas_int = rendimiento.por_intencion(videos)
+    if filas_int:
+        lineas += ["", "Por intención (para qué estaba hecha la pieza):"]
+        for f in filas_int:
+            lineas.append(
+                f"- {f['emoji']} {f['label']}: {f['vistas_mediana']:.0f} vistas medianas "
+                f"({f['piezas']} pieza{'s' if f['piezas'] != 1 else ''}, {f['vistas_total']} en total)"
+            )
+
+    if filas or filas_int:
         lineas += ["", "Los ángulos nuevos ya salen guiados por esto: python refrescar_angulos.py"]
     telegram_client.send_message("\n".join(lineas))
 
@@ -363,7 +388,7 @@ def _handle_wizard_callback(cq: dict) -> None:
         botones = [[("✅ Sí", "wz|foto|si"), ("🚫 No", "wz|foto|no")]]
         _wizard["message_id"] = telegram_client.send_choice(
             "¿Incluir una foto generada por IA en alguna slide? "
-            "(Pollinations.ai, gratis, pero la calidad es despareja)",
+            "(gratis, pero la calidad es despareja)",
             botones,
         )
         return

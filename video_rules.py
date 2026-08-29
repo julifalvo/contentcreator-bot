@@ -43,12 +43,14 @@ VOZ NARRATIVA — tercera persona, caso de agencia (regla dura):
 
 PROHIBIDO ADEMÁS: lenguaje de marketing vacío (revolucioná, solución integral, en la era digital, potenciá), superlativos huecos, estadísticas generales inventadas, amenazas catastróficas.
 
+<<GANCHO>>
+
 ESTRUCTURA: entre 5 y 7 escenas. La primera es el gancho (en segunda persona, lo que está perdiendo HOY quien mira). La última es el cierre (retoma el ancla, invita a escribir/comentar). En el medio, la historia del cliente.
 
 HASHTAGS — máximo 5 (regla dura): priorizá los más usados en negocios/tecnología/IA en español (negocios, pymes, tecnologia, ia, automatizacion, emprendedores, innovacion, negociodigital).
 
 RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
-{"negocio":"...","ancla":"...","historia":"...","escenas":[{"narracion":"...","b_roll":"..."}],"caption":"2-4 líneas en tercera persona, sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["máximo 5, sin #, una palabra cada uno"]}"""
+{"negocio":"...","ancla":"...","historia":"...","escenas":[{"narracion":"...","b_roll":"..."}],"caption":"2-4 líneas en tercera persona, sin hashtags adentro, cierra con una pregunta concreta a quien mira","hashtags":["máximo 5, sin #, una palabra cada uno"]}""".replace("<<GANCHO>>", content_rules.GANCHO)
 
 
 def validate(data: dict) -> None:
@@ -82,6 +84,9 @@ def validate(data: dict) -> None:
     vendedor = [f for f in content_rules.TONO_VENDEDOR if f in texto]
     if vendedor:
         raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in content_rules.PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada (el gancho tiene que ser creíble): {exageradas}")
     dueño = [f for f in content_rules.NARRADOR_DUEÑO if f in texto]
     if dueño:
         raise ValueError(f"Narrador hablando como dueño del negocio, no como agencia: {dueño}")

@@ -1,14 +1,18 @@
 """CLI: genera un carrusel de TikTok (imágenes + caption) para el perfil de negocios/IA.
 
 Pipeline:
-    ángulo (config.PILLARS) -> ai_providers.py le pide el texto a Groq o
+    ángulo (angulos_pool.json) + contexto estratégico (audiencia.py: la
+    intención de la pieza y la tensión de la audiencia contra la que se
+    escribe) -> ai_providers.py le pide el texto a Groq o
     Gemini (el que esté disponible, alternando entre los dos) -> si alguna
-    slide es tipo 'foto', image_gen.py le pide esa imagen a Pollinations.ai
+    slide es tipo 'foto', image_gen.py le pide esa imagen al generador de
+    imágenes (Cloudflare Workers AI, con Pollinations de respaldo)
     -> design.py arma el HTML editorial de cada slide -> Chrome headless lo
     rinde a PNG 1080x1920.
 
-Todo gratis: Groq/Gemini tienen free tier sin tarjeta, Pollinations no pide
-ni API key, y el render es local.
+Todo gratis: Groq/Gemini tienen free tier sin tarjeta, las imágenes salen del
+free tier de Cloudflare Workers AI (o de Pollinations, que ni API key pide), y
+el render es local.
 
 Uso:
     python generate.py --pillar automatizacion
@@ -29,6 +33,7 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 import angulos
+import audiencia
 import design
 import image_gen
 import render
@@ -37,7 +42,7 @@ from ai_providers import (
     generate_carousel, generate_chisme, generate_humor, generate_impacto,
     generate_sabias_que, generate_video_script,
 )
-from config import PILLARS, RUBROS
+from config import INTENCIONES, PILLARS, RUBROS
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
@@ -61,20 +66,26 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
     palette = design.pick_palette()
     formato = pillar.get("formato", "caso")
     sin_caso = formato in _FORMATOS_SIN_CASO
+    # Para qué está hecha esta pieza (educativo/emocional/conexión/venta) y
+    # contra qué problema, miedo y objeción concretos de la audiencia se
+    # escribe. Se sortea por pieza, así el mismo ángulo no rinde siempre la
+    # misma pieza. Ver audiencia.py.
+    ctx = audiencia.contexto_de_pieza(pillar_key)
 
     print(f"→ {pillar['label']} — {angulo}")
+    print(f"  Intención: {INTENCIONES[ctx['intencion']]['label']} · contra: {ctx['tension']['objecion']}")
     if formato == "humor":
-        data = generate_humor(pillar["label"], angulo, con_foto)
+        data = generate_humor(pillar["label"], angulo, con_foto, ctx["bloque"])
     elif formato == "sabias_que":
-        data = generate_sabias_que(pillar["label"], angulo, con_foto)
+        data = generate_sabias_que(pillar["label"], angulo, con_foto, ctx["bloque"])
     elif formato == "chisme":
-        data = generate_chisme(pillar["label"], angulo)
+        data = generate_chisme(pillar["label"], angulo, ctx["bloque"])
     elif formato == "impacto":
-        data = generate_impacto(pillar["label"], angulo)
+        data = generate_impacto(pillar["label"], angulo, ctx["bloque"])
     else:
         rubro = random.choice(RUBROS)
         print(f"  Rubro: {rubro}")
-        data = generate_carousel(pillar["label"], angulo, rubro, con_foto)
+        data = generate_carousel(pillar["label"], angulo, rubro, con_foto, ctx["bloque"])
         print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
 
     slides = data["slides"]
@@ -122,12 +133,15 @@ def build_piece(pillar_key: str, angulo: str | None = None, con_foto: bool = Fal
         + " | ".join(f"{k}: {v}" for k, v in s.items() if k not in ("tipo", "_img_data_uri"))
         for i, s in enumerate(slides, 1)
     )
+    intencion_label = INTENCIONES[ctx["intencion"]]["label"]
     if sin_caso:
         cabecera = f"""PILAR: {pillar['label']}
+INTENCIÓN: {intencion_label}
 ÁNGULO: {angulo}
 TEMA: {data['tema']}"""
     else:
         cabecera = f"""PILAR: {pillar['label']}
+INTENCIÓN: {intencion_label}
 ÁNGULO: {angulo}
 NEGOCIO: {data['negocio']}
 DETALLE ANCLA: {data['ancla']}
@@ -154,7 +168,8 @@ HASHTAGS:
     }
     (folder / "contenido.json").write_text(
         json.dumps({**data_sin_imagenes, "formato": "carrusel", "paleta": palette["name"],
-                    "pilar": pillar_key, "angulo": angulo},
+                    "pilar": pillar_key, "angulo": angulo,
+                    "intencion": ctx["intencion"], "tension": ctx["tension"]},
                    ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -174,9 +189,11 @@ def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
     angulo = angulo or angulos.elegir_angulo(pillar_key)
     rubro = random.choice(RUBROS)
 
+    ctx = audiencia.contexto_de_pieza(pillar_key)
+
     print(f"→ [video] {pillar['label']} — {angulo}")
-    print(f"  Rubro: {rubro}")
-    data = generate_video_script(pillar["label"], angulo, rubro)
+    print(f"  Rubro: {rubro} · intención: {INTENCIONES[ctx['intencion']]['label']}")
+    data = generate_video_script(pillar["label"], angulo, rubro, ctx["bloque"])
     print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -194,6 +211,7 @@ def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
     )
     (folder / "contenido.txt").write_text(
         f"""PILAR: {pillar['label']}
+INTENCIÓN: {INTENCIONES[ctx['intencion']]['label']}
 ÁNGULO: {angulo}
 NEGOCIO: {data['negocio']}
 DETALLE ANCLA: {data['ancla']}
@@ -212,7 +230,8 @@ HASHTAGS:
         encoding="utf-8",
     )
     (folder / "contenido.json").write_text(
-        json.dumps({**data, "formato": "video", "pilar": pillar_key, "angulo": angulo},
+        json.dumps({**data, "formato": "video", "pilar": pillar_key, "angulo": angulo,
+                    "intencion": ctx["intencion"], "tension": ctx["tension"]},
                    ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -227,7 +246,7 @@ def main() -> None:
                         help="Pilar de contenido (default: random)")
     parser.add_argument("--count", type=int, default=1, help="Cantidad de piezas a generar")
     parser.add_argument("--foto", action="store_true",
-                        help="Permite que el modelo elija una slide de foto real (Pollinations). Off por default.")
+                        help="Permite que el modelo elija una slide de foto real (IA). Off por default.")
     parser.add_argument("--list-pillars", action="store_true", help="Lista los pilares y sale")
     args = parser.parse_args()
 
