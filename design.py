@@ -93,17 +93,19 @@ body::before {{
   background-size:5px 5px;
 }}
 .page {{
-  position:absolute; inset:0; padding:190px 150px 300px;
+  position:absolute; inset:0; padding:430px 150px 540px;
   display:flex; flex-direction:column;
 }}
 /* Zona segura de TikTok: la UI propia de la app (usuario, caption, botones de
    like/comentario, música) tapa ~150px arriba y ~250px abajo del posteo. El
    @handle y el folio quedan dentro de esa franja tapada si no se los sube.
-   Además, el canvas es 1080x1920 (9:16) pero la mayoría de las pantallas son
-   más altas (19.5:9, 20:9 y similares): TikTok escala la imagen a pantalla
-   completa ("cover") y eso recorta hasta ~120-140px de CADA lado en los
-   celulares más extremos — por eso el margen lateral es bastante más generoso
-   que un margen puramente estético. */
+   El padding vertical es mucho más grande que el lateral por una razón que no
+   es estética: el lienzo es 20:9 (ver CANVAS_H en render.py), así que entra
+   entero en los celulares de hoy, pero en un 16:9 TikTok recorta ~240px de
+   arriba y ~240px de abajo. Esas dos franjas están vacías a propósito y son
+   lo único que se pierde; el área útil que queda en el medio es la misma que
+   cuando el lienzo era 9:16. El margen lateral sigue siendo generoso porque
+   el ancho es lo que menos sobra. */
 /* El contenido se centra verticalmente y ocupa el alto disponible entre el
    encabezado y el pie. Si se deja arriba con un spacer abajo, queda medio
    lienzo vacío y la pieza se ve incompleta. */
@@ -315,7 +317,7 @@ h2 {{
    una paleta pensada para papel claro no sirve arriba de una foto. El velo
    es más oscuro arriba/abajo (donde van kicker y pie) y más suave al medio,
    para que la foto siga siendo lo llamativo sin perder legibilidad. */
-.page-fondo {{ padding:190px 100px 300px; }}
+.page-fondo {{ padding:430px 100px 540px; }}
 .bg-fondo {{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }}
 .scrim-fondo {{
   position:absolute; inset:0; z-index:1;

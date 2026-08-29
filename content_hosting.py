@@ -73,11 +73,19 @@ def publish_images(image_paths: list[Path]) -> list[str]:
     for i, path in enumerate(image_paths):
         img = Image.open(path).convert("RGB")
         name = f"slide-{i + 1:02d}.jpg"
-        # calidad máxima y sin subsampling de croma: nuestras imágenes son
-        # texto nítido sobre colores planos, no fotos — el subsampling 4:2:0
-        # por default de JPEG le mete "ringing" a los bordes del texto y a
-        # simple vista se ve borroso/con artefactos de color.
-        img.save(tanda_dir / name, "JPEG", quality=100, subsampling=0)
+        # Sin subsampling de croma (4:4:4): nuestras imágenes son texto nítido
+        # sobre colores planos, no fotos — el 4:2:0 por default de JPEG le mete
+        # "ringing" a los bordes del texto y a simple vista se ve borroso y con
+        # artefactos de color. Eso es lo que NO se negocia.
+        #
+        # La calidad, en cambio, bajó de 100 a 95 cuando el render pasó a
+        # 1440x3200 (ver render.py): a q100 cada slide pesaba ~3 MB y una
+        # publicación de 8 slides metía 24 MB en un repo de git, que no olvida
+        # nunca. Medido contra q100 sobre piezas reales, q95 da PSNR ~46 dB
+        # -bien arriba del umbral de "visualmente sin pérdida", ~40 dB- y pesa
+        # un tercio. O sea: el archivo pesa lo mismo que antes del cambio de
+        # resolución, pero con el doble de píxeles adentro.
+        img.save(tanda_dir / name, "JPEG", quality=95, subsampling=0)
         urls.append(f"{PUBLIC_BASE_URL}/{tanda}/{name}")
 
     # Purga tandas viejas (se conservan las _CONSERVAR más recientes además

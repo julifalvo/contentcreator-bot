@@ -17,7 +17,29 @@ from pathlib import Path
 
 from PIL import Image
 
-CANVAS_W, CANVAS_H = 1080, 1920
+# El lienzo es 20:9, NO 9:16. Suena raro para "formato TikTok", pero es la
+# unica forma de que no se recorte: TikTok muestra el posteo a pantalla
+# completa con "cover", y las pantallas de hoy son 19.5:9 o 20:9. Un 1080x1920
+# (9:16, 1:1.78) en un celular 20:9 (1:2.22) se escala por alto -x1.25- y
+# pierde ~135px de CADA lado; de ahi que la pieza se viera a la vez ampliada,
+# cortada y mas blanda de lo que se rindio. Con el lienzo ya a 20:9 la imagen
+# entra 1:1 en esos telefonos y no hay ni zoom ni recorte lateral.
+#
+# En los 16:9 que quedan se recorta arriba y abajo, y por eso design.py suma
+# 240px de padding en cada punta: esas dos franjas estan vacias a proposito y
+# son lo unico que se pierde. El area util para el contenido queda igual que
+# antes (1430px), o sea que ninguna slide se re-acomoda.
+CANVAS_W, CANVAS_H = 1080, 2400
+
+# Se rinde al doble (2160x4800) y se baja a ANCHO_FINAL con Lanczos, en vez de
+# rendir directo al tamano final: el supersampling le da al texto un
+# antialiasing mucho mas limpio que el del rasterizador a 1x, y eso sobrevive
+# mejor al JPEG y al recompresor de TikTok. El entregable queda igual en 20:9,
+# a 1440 de ancho: por encima de los 1080 del canvas para los telefonos de
+# 1440px, sin irse a un archivo de varios MB por slide.
+ESCALA_RENDER = 2
+ANCHO_FINAL = 1440
+
 FONTS_DIR = Path(__file__).parent / "assets" / "fonts"
 
 _WINDOWS_CANDIDATES = [
@@ -64,7 +86,7 @@ def image_data_uri(path: Path) -> str:
 
 
 def html_to_png(html: str, out_path: Path) -> Path:
-    """Rinde `html` a un PNG de 1080x1920 (formato TikTok) en `out_path`."""
+    """Rinde `html` a un PNG de 1440x3200 (20:9, ver CANVAS_H) en `out_path`."""
     # Chrome escribe el screenshot relativo a SU cwd, no al nuestro: si no le
     # pasamos la ruta absoluta, falla con "no puede encontrar la ruta".
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -81,7 +103,7 @@ def html_to_png(html: str, out_path: Path) -> Path:
                 "--disable-gpu",
                 "--hide-scrollbars",
                 "--no-sandbox",  # necesario para correr como servicio en Ubuntu
-                "--force-device-scale-factor=1",
+                f"--force-device-scale-factor={ESCALA_RENDER}",
                 "--default-background-color=00000000",
                 f"--window-size={CANVAS_W},{CANVAS_H}",
                 f"--screenshot={out_path}",
@@ -95,8 +117,21 @@ def html_to_png(html: str, out_path: Path) -> Path:
     if not out_path.exists():
         raise RuntimeError(f"Chrome no generó la imagen:\n{result.stderr[-800:]}")
 
+    _bajar_a_final(out_path)
     _recomprimir(out_path)
     return out_path
+
+
+def _bajar_a_final(path: Path) -> None:
+    """Baja el render de 2x al tamano de entrega con Lanczos (el remuestreo mas
+    limpio de Pillow para reducir). Es el paso que convierte el supersampling
+    en nitidez real: sin esto el archivo pesaria cuatro veces mas sin verse
+    mejor en un telefono."""
+    img = Image.open(path)
+    if img.width != ANCHO_FINAL:
+        alto = round(img.height * ANCHO_FINAL / img.width)
+        img = img.resize((ANCHO_FINAL, alto), Image.LANCZOS)
+        img.save(path, "PNG")
 
 
 def _recomprimir(path: Path) -> None:
