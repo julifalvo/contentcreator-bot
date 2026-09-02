@@ -19,7 +19,9 @@ from dotenv import load_dotenv
 
 import chisme_rules
 import content_rules
+import demo_rules
 import impacto_rules
+import reel_rules
 import video_rules
 
 load_dotenv()
@@ -313,3 +315,79 @@ def generate_video_script(pilar: str, angulo: str, rubro: str, contexto: str | N
             print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
 
     raise RuntimeError(f"Groq no devolvió un guion de video válido tras {MAX_RETRIES} intentos: {last_error}")
+
+
+def generate_reel(pilar: str, angulo: str, rubro: str, contexto: str | None = None) -> dict:
+    """Pide a Groq el guion de un Reel con b-roll real + texto en pantalla,
+    SIN voz en off generada (ver reel_rules.py). Costo: $0 (free tier)."""
+    user = (
+        f"Pilar: {pilar}.\n"
+        f"Ángulo de esta pieza: {angulo}\n"
+        f"Rubro del negocio: {rubro} (usá este, no lo cambies por otro).\n\n"
+        "Armá el guion siguiendo tu método: primero el ancla, después la "
+        "historia completa, el objetivo comercial, y recién ahí los beats "
+        "(hook, desarrollo, cta)."
+    )
+    user = _sumar_contexto(user, contexto)
+
+    last_error: Exception | None = None
+    for intento in range(1, MAX_RETRIES + 1):
+        resp = _post_con_espera(reel_rules.SYSTEM_PROMPT_REEL, user)
+        raw = resp.json()["choices"][0]["message"]["content"]
+        try:
+            data = content_rules.normalizar(json.loads(raw))
+            reel_rules.validate(data)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
+
+    raise RuntimeError(f"Groq no devolvió un guion de reel válido tras {MAX_RETRIES} intentos: {last_error}")
+
+
+def generate_demo(pilar: str, angulo: str, rubro: str, contexto: str | None = None) -> dict:
+    """Pide a Groq el guion de un DEMO animado: las escenas de interfaz que se
+    van a animar (ver demo_rules.py / demo_designs.py). Costo: $0 (free tier)."""
+    user = (
+        f"Pilar: {pilar}.\n"
+        f"Ángulo de esta pieza: {angulo}\n"
+        f"Rubro del negocio: {rubro} (usá este, no lo cambies por otro).\n\n"
+        "Armá el demo siguiendo tu método: primero el ancla, después la historia "
+        "completa, y recién ahí las escenas que la muestran funcionando."
+    )
+    user = _sumar_contexto(user, contexto)
+
+    last_error: Exception | None = None
+    for intento in range(1, MAX_RETRIES + 1):
+        resp = _post_con_espera(demo_rules.SYSTEM_PROMPT_DEMO, user)
+        raw = resp.json()["choices"][0]["message"]["content"]
+        try:
+            data = content_rules.normalizar(json.loads(raw))
+            demo_rules.validate(data)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
+
+    raise RuntimeError(f"Groq no devolvió un demo válido tras {MAX_RETRIES} intentos: {last_error}")
+
+
+def generate_ig_caption(resumen: str) -> dict:
+    """Pide a Groq que reescriba, a partir del resumen de una pieza YA
+    generada para TikTok, un caption nativo de Instagram (ver
+    content_rules.SYSTEM_PROMPT_IG_CAPTION). Costo: $0 (free tier)."""
+    system = content_rules.get_ig_caption_system_prompt()
+
+    last_error: Exception | None = None
+    for intento in range(1, MAX_RETRIES + 1):
+        resp = _post_con_espera(system, resumen)
+        raw = resp.json()["choices"][0]["message"]["content"]
+        try:
+            data = content_rules.normalizar(json.loads(raw))
+            content_rules.validate_ig_caption(data)
+            return data
+        except (json.JSONDecodeError, ValueError) as e:
+            last_error = e
+            print(f"  (intento {intento}/{MAX_RETRIES}: {e}, reintentando...)")
+
+    raise RuntimeError(f"Groq no devolvió un caption de Instagram válido tras {MAX_RETRIES} intentos: {last_error}")

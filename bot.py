@@ -11,15 +11,32 @@ Dejalo corriendo (python bot.py) y desde el chat de Telegram mandale:
     /ayuda                   este mensaje
 
 El wizard de /generar (ver _iniciar_wizard / _handle_wizard_callback) deja
-elegir el formato (carrusel de imágenes o video narrado con voz de ElevenLabs
-+ b-roll de Pexels), el pilar, el ángulo puntual, y — solo para carrusel — si
-la pieza incluye o no una foto generada por IA (gratis, ver image_gen.py,
-pero de calidad despareja, así que es opt-in en vez de automático). El formato video
+elegir primero dónde publicás (TikTok, Instagram, o ambas), después el
+formato (carrusel de imágenes o video narrado con voz de ElevenLabs + b-roll
+de Pexels), el pilar, el ángulo puntual, y — solo para carrusel — si la pieza
+incluye o no una foto generada por IA (gratis, ver image_gen.py, pero de
+calidad despareja, así que es opt-in en vez de automático). El formato video
 no está disponible para el pilar humor todavía.
+
+Cuando la pieza va a Instagram, un carrusel se publica como carrusel de feed
+(las mismas slides, adaptadas a 4:5 — ver instagram_render.py) más una Story
+con la portada; un video se publica como Reel más esa misma Story. La Graph
+API de Instagram no tiene modo borrador: aprobar publica directo ahí, a
+diferencia de TikTok que cae al inbox de la app mientras la app no esté
+auditada (ver tiktok_client.py). El atajo rápido /generar [pilar] sigue
+siendo solo TikTok — para Instagram hace falta el wizard completo.
 
 El texto completo de /ayuda (y la lista de /pilares) se arma solo a partir de
 config.PILLARS, así que no hace falta tocar este archivo cuando se agrega o
 saca un pilar.
+
+Todo paso del wizard tiene un botón "❌ Cancelar", y una falla al subir a
+TikTok o Instagram deja un botón "🔁 Reintentar" que repite SOLO esa
+plataforma sin tener que generar ni aprobar de nuevo (ver _ultima_publicacion).
+El estado (pieza pendiente de aprobación, wizard a mitad de camino, última
+publicación) se persiste en bot_state.json en cada update procesado: si el
+bot se reinicia con algo pendiente, lo retoma solo al arrancar en vez de
+dejar botones viejos en Telegram que no hacen nada.
 
 Solo responde al chat configurado en TELEGRAM_CHAT_ID; cualquier otro chat se
 ignora (por si alguien más le escribe al bot).
@@ -44,12 +61,19 @@ load_dotenv()
 
 import angulos
 import content_hosting
+import instagram_client
+import instagram_render
 import rendimiento
 import telegram_client
 import tiktok_client
 import tiktok_metrics
 from config import INTENCIONES, PILLARS, intenciones_de
-from generate import PILARES_VIDEO, build_piece, build_video_piece
+from generate import (
+    PILARES_VIDEO, asegurar_caption_ig, build_demo_piece, build_piece, build_reel_piece,
+    build_tip_reel_piece, build_video_piece,
+)
+
+_LABEL_PLATAFORMA = {"tiktok": "TikTok", "instagram": "Instagram"}
 
 ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
@@ -80,20 +104,38 @@ def _pilares_listado() -> str:
 def _build_help_text() -> str:
     return (
         "Comandos:\n\n"
-        "/generar — abre un wizard: elegís formato (carrusel o video narrado), después pilar, "
-        "después ángulo puntual, y (solo carrusel) si querés o no una foto generada por IA\n"
-        "/generar [pilar] — atajo rápido: genera ya mismo un carrusel con ese pilar, ángulo y rubro al azar, sin foto\n"
+        "/generar — abre un wizard: primero dónde publicás (TikTok, Instagram o ambas), después "
+        "formato (carrusel o video narrado), pilar, ángulo puntual, y (solo carrusel) si querés o no "
+        "una foto generada por IA\n"
+        "/generar [pilar] — atajo rápido: genera ya mismo un carrusel con ese pilar, ángulo y rubro al "
+        "azar, sin foto, solo para TikTok (para Instagram hace falta el wizard completo)\n"
         f"{_pilares_listado()}\n"
         "- random — elige un pilar al azar (solo válido con el atajo rápido)\n\n"
         "Formato video narrado: voz real (ElevenLabs) sobre b-roll de video real (Pexels), en vez de "
         "slides estáticas. No disponible para el pilar humor. Tarda bastante más que un carrusel.\n\n"
-        "/publicar — manda a aprobar la última pieza que quedó en output/, sin volver a generarla\n"
+        "Formato reel: b-roll real (Pexels) con texto en pantalla superpuesto por beat (hook, desarrollo, "
+        "CTA), SIN voz generada por IA. Mismos pilares que el video narrado.\n\n"
+        "Formato reel aesthetic: mismo contenido de 'Sabías que...?' (sin caso de cliente), pero en vez "
+        "del carrusel cada dato sale como una tarjeta flotante arriba de UN SOLO clip de b-roll fijo "
+        "(laptop, café, escritorio — look 'aesthetic' de escritorio) que se repite en todo el video, en "
+        "vez de un clip distinto por beat. Fijo al pilar sabias_que, no pide elegir pilar en el wizard.\n\n"
+        "Formato demo animado: demostraciones GRÁFICAS rápidas de la solución funcionando (un chat que se "
+        "contesta solo, un panel de métricas que sube, una agenda que se llena, la facturación creciendo). "
+        "Sin fotos ni b-roll: son interfaces animadas frame a frame, con 14 diseños distintos que la IA "
+        "combina según el caso. Mismos pilares que el video narrado; tarda un par de minutos.\n\n"
+        "Instagram: un carrusel se publica como carrusel de feed (4:5) + una Story con la portada; un "
+        "video, como Reel + esa misma Story. El caption se reescribe aparte para Instagram (no es el "
+        "mismo texto que TikTok — se muestra en un mensaje antes de aprobar). Requiere haber corrido "
+        "'python instagram_auth.py' una vez; a diferencia de TikTok, la Graph API publica directo, sin "
+        "pasar por el inbox de la app.\n\n"
+        "/publicar — manda a aprobar la última pieza que quedó en output/, sin volver a generarla "
+        "(a las plataformas que se hayan elegido al generarla)\n"
         "/pilares — lista de pilares (lo mismo que arriba)\n"
         "/metricas — seguidores, likes totales y los videos con más vistas de la cuenta (requiere haber "
         "reautorizado con los scopes user.info.stats y video.list, ver tiktok_metrics.py)\n"
         "/ayuda — este mensaje\n\n"
         "Cómo se aprueba: llega la vista previa (imágenes o video) con botones ✅ Aprobar y publicar / "
-        "❌ Cancelar. Solo se sube a TikTok si tocás Aprobar; con Cancelar no se publica nada. "
+        "❌ Cancelar. Solo se publica si tocás Aprobar; con Cancelar no se publica nada. "
         "Mientras haya una pieza esperando aprobación, no se puede generar otra — aprobala o cancelala primero."
     )
 
@@ -103,10 +145,24 @@ HELP_TEXT = _build_help_text()
 # Pieza generada esperando aprobación (una a la vez, es un bot personal de un solo uso).
 _pending: dict | None = None
 
-# Wizard de /generar en curso (pilar -> ángulo -> foto), también de a uno.
-# Guarda el message_id del último paso para poder ignorar taps en botones
-# viejos (si se reinicia el wizard) y para sacarle el teclado una vez usado.
+# Wizard de /generar en curso (plataforma -> formato -> pilar -> ángulo -> foto),
+# también de a uno. Guarda el message_id del último paso para poder ignorar
+# taps en botones viejos (si se reinicia el wizard) y para sacarle el teclado
+# una vez usado.
 _wizard: dict | None = None
+
+# Última pieza que se mandó a publicar (aprobada), para que el botón
+# "🔁 Reintentar" de una falla de subida (ver _publicar_en_tiktok/_instagram)
+# pueda repetir el intento sin tener que generar ni aprobar de nuevo.
+_ultima_publicacion: dict | None = None
+
+# Los tres de arriba viven en memoria y se persisten acá (ver _guardar_estado/
+# _cargar_estado): sin esto, reiniciar el bot mientras había una pieza
+# esperando aprobación (o un wizard a mitad de camino) hacía que tocar un
+# botón viejo en Telegram no hiciera nada — ni error ni éxito — porque el
+# estado en memoria se había perdido pero el mensaje con los botones seguía
+# ahí. No se commitea (es estado de corrida, no config).
+STATE_PATH = Path(__file__).parent / "bot_state.json"
 
 _ANGULO_MAX_LEN = 60
 # Cuántas opciones de ángulo mostrar como botones en el wizard: es un
@@ -114,27 +170,97 @@ _ANGULO_MAX_LEN = 60
 # cómodo entero como botones de Telegram.
 _ANGULO_OPCIONES_WIZARD = 8
 
+# Se agrega a cada paso del wizard: sin esto, una vez que arrancabas /generar
+# no había forma de abortar antes de llegar al último paso (o simplemente
+# dejarlo colgado, que no rompe nada pero tampoco avisa).
+_BOTON_CANCELAR = [("❌ Cancelar", "wz|cancelar|_")]
+
 
 def _truncar(texto: str, n: int) -> str:
     return texto if len(texto) <= n else texto[: n - 1].rstrip() + "…"
 
 
+def _serializar_pieza(pieza: dict) -> dict:
+    """`_pending`/`_ultima_publicacion` guardan Path (folder, images,
+    video_path), que json no serializa directo."""
+    out = dict(pieza)
+    out["folder"] = str(pieza["folder"])
+    if "images" in out:
+        out["images"] = [str(p) for p in out["images"]]
+    if out.get("video_path") is not None:
+        out["video_path"] = str(out["video_path"])
+    return out
+
+
+def _deserializar_pieza(data: dict) -> dict:
+    out = dict(data)
+    out["folder"] = Path(out["folder"])
+    if "images" in out:
+        out["images"] = [Path(p) for p in out["images"]]
+    if out.get("video_path") is not None:
+        out["video_path"] = Path(out["video_path"])
+    return out
+
+
+def _guardar_estado() -> None:
+    estado = {
+        "pending": _serializar_pieza(_pending) if _pending else None,
+        "wizard": _wizard,
+        "ultima_publicacion": _serializar_pieza(_ultima_publicacion) if _ultima_publicacion else None,
+    }
+    STATE_PATH.write_text(json.dumps(estado, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _cargar_estado() -> None:
+    global _pending, _wizard, _ultima_publicacion
+    if not STATE_PATH.exists():
+        return
+    try:
+        estado = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  (no pude leer {STATE_PATH.name}, arranco sin estado previo: {e})")
+        return
+
+    if estado.get("pending"):
+        _pending = _deserializar_pieza(estado["pending"])
+        print(f"  (retomando pieza pendiente de aprobación de antes del reinicio: {_pending['folder'].name})")
+    if estado.get("wizard"):
+        _wizard = estado["wizard"]
+        print("  (retomando un wizard de /generar a mitad de camino de antes del reinicio)")
+    if estado.get("ultima_publicacion"):
+        _ultima_publicacion = _deserializar_pieza(estado["ultima_publicacion"])
+
+
 def _iniciar_wizard() -> None:
     global _wizard
     botones = [
-        [("🖼️ Carrusel de imágenes", "wz|formato|carrusel")],
-        [("🎬 Video narrado (voz + b-roll)", "wz|formato|video")],
+        [("🎵 Solo TikTok", "wz|plataforma|tiktok")],
+        [("📸 Solo Instagram", "wz|plataforma|instagram")],
+        [("🎵📸 Ambas", "wz|plataforma|ambas")],
+        _BOTON_CANCELAR,
     ]
-    message_id = telegram_client.send_choice("¿Qué formato querés generar?", botones)
-    _wizard = {"message_id": message_id, "formato": None, "pilar_key": None, "angulo": None}
+    message_id = telegram_client.send_choice("¿Dónde publicás esta pieza?", botones)
+    _wizard = {"message_id": message_id, "plataformas": None, "formato": None, "pilar_key": None, "angulo": None}
 
 
-def _lanzar_generacion(pillar_key: str, angulo: str | None, con_foto: bool) -> None:
+def _guardar_plataformas(folder, plataformas: list[str]) -> None:
+    """Persiste en contenido.json las plataformas elegidas en el wizard, para
+    que /publicar (que retoma la última pieza generada sin recordar por qué
+    canal se pidió) sepa a dónde mandarla."""
+    content_path = folder / "contenido.json"
+    data = json.loads(content_path.read_text(encoding="utf-8"))
+    data["plataformas"] = plataformas
+    content_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _lanzar_generacion(pillar_key: str, angulo: str | None, con_foto: bool,
+                        plataformas: list[str] | None = None) -> None:
     if _pending is not None:
         telegram_client.send_message(
             "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala antes de generar otra."
         )
         return
+    plataformas = plataformas or ["tiktok"]
 
     pillar = PILLARS[pillar_key]
     extra = " (con foto IA)" if con_foto else ""
@@ -145,15 +271,17 @@ def _lanzar_generacion(pillar_key: str, angulo: str | None, con_foto: bool) -> N
         telegram_client.send_message(f"Falló la generación: {e}")
         return
 
-    _enviar_a_aprobar(folder)
+    _guardar_plataformas(folder, plataformas)
+    _enviar_a_aprobar(folder, plataformas)
 
 
-def _lanzar_generacion_video(pillar_key: str, angulo: str | None) -> None:
+def _lanzar_generacion_video(pillar_key: str, angulo: str | None, plataformas: list[str] | None = None) -> None:
     if _pending is not None:
         telegram_client.send_message(
             "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala antes de generar otra."
         )
         return
+    plataformas = plataformas or ["tiktok"]
 
     pillar = PILLARS[pillar_key]
     telegram_client.send_message(
@@ -166,7 +294,74 @@ def _lanzar_generacion_video(pillar_key: str, angulo: str | None) -> None:
         telegram_client.send_message(f"Falló la generación: {e}")
         return
 
-    _enviar_a_aprobar(folder)
+    _guardar_plataformas(folder, plataformas)
+    _enviar_a_aprobar(folder, plataformas)
+
+
+def _lanzar_generacion_reel(pillar_key: str, angulo: str | None, plataformas: list[str] | None = None) -> None:
+    if _pending is not None:
+        telegram_client.send_message(
+            "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala antes de generar otra."
+        )
+        return
+    plataformas = plataformas or ["tiktok"]
+
+    pillar = PILLARS[pillar_key]
+    telegram_client.send_message(
+        f"Generando reel ({pillar['label']})... b-roll real + texto en pantalla, sin voz generada."
+    )
+    try:
+        folder = build_reel_piece(pillar_key, angulo=angulo)
+    except Exception as e:
+        telegram_client.send_message(f"Falló la generación: {e}")
+        return
+
+    _guardar_plataformas(folder, plataformas)
+    _enviar_a_aprobar(folder, plataformas)
+
+
+def _lanzar_generacion_demo(pillar_key: str, angulo: str | None, plataformas: list[str] | None = None) -> None:
+    if _pending is not None:
+        telegram_client.send_message(
+            "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala antes de generar otra."
+        )
+        return
+    plataformas = plataformas or ["tiktok"]
+
+    pillar = PILLARS[pillar_key]
+    telegram_client.send_message(
+        f"Generando demo animado ({pillar['label']})... escenas gráficas de la solución "
+        "funcionando. Tarda un par de minutos porque se rinde frame por frame."
+    )
+    try:
+        folder = build_demo_piece(pillar_key, angulo=angulo)
+    except Exception as e:
+        telegram_client.send_message(f"Falló la generación: {e}")
+        return
+
+    _guardar_plataformas(folder, plataformas)
+    _enviar_a_aprobar(folder, plataformas)
+
+
+def _lanzar_generacion_tip_reel(angulo: str | None, plataformas: list[str] | None = None) -> None:
+    if _pending is not None:
+        telegram_client.send_message(
+            "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala antes de generar otra."
+        )
+        return
+    plataformas = plataformas or ["tiktok"]
+
+    telegram_client.send_message(
+        "Generando reel aesthetic (fondo laptop+café fijo + tarjetas de 'sabías que...?')..."
+    )
+    try:
+        folder = build_tip_reel_piece(angulo=angulo)
+    except Exception as e:
+        telegram_client.send_message(f"Falló la generación: {e}")
+        return
+
+    _guardar_plataformas(folder, plataformas)
+    _enviar_a_aprobar(folder, plataformas)
 
 
 def _handle_generar(args: list[str]) -> None:
@@ -190,20 +385,22 @@ def _handle_generar(args: list[str]) -> None:
     _lanzar_generacion(pillar_key, angulo=None, con_foto=False)
 
 
-def _enviar_a_aprobar(folder) -> None:
+def _enviar_a_aprobar(folder, plataformas: list[str]) -> None:
     """Manda la vista previa de `folder` (imágenes o video, según el formato
-    con el que se haya generado) y la deja pendiente de aprobación."""
+    con el que se haya generado) y la deja pendiente de aprobación. Si
+    `plataformas` incluye Instagram, antes pide (y muestra) el caption nativo
+    de Instagram — distinto del de TikTok, ver content_rules.SYSTEM_PROMPT_IG_CAPTION."""
     global _pending
     content = json.loads((folder / "contenido.json").read_text(encoding="utf-8"))
     hashtags = " ".join(f"#{h.lstrip('#')}" for h in content.get("hashtags", []))
-    caption = f"{content['caption']}\n\n{hashtags}".strip()
+    caption_tiktok = f"{content['caption']}\n\n{hashtags}".strip()
     # Piezas de antes de que existiera el formato video no tienen la clave
     # 'formato' en su contenido.json: son todas carrusel.
     formato = content.get("formato", "carrusel")
 
     # La ficha va aparte y no pegada al caption: el caption de este mensaje es
-    # exactamente el texto que se publica si aprobás, así que meterle la
-    # intención adentro la subiría a TikTok.
+    # exactamente el texto que se publica en TikTok si aprobás, así que
+    # meterle la intención adentro lo subiría a TikTok.
     intencion = content.get("intencion")
     if intencion in INTENCIONES:
         ficha = INTENCIONES[intencion]
@@ -212,33 +409,82 @@ def _enviar_a_aprobar(folder) -> None:
             f"Ángulo: {content.get('angulo', '?')}"
         )
 
-    if formato == "video":
+    caption_ig = None
+    if "instagram" in plataformas:
+        telegram_client.send_message("Escribiendo el caption de Instagram...")
+        try:
+            ig = asegurar_caption_ig(folder)
+            hashtags_ig = " ".join(f"#{h.lstrip('#')}" for h in ig.get("hashtags_ig", []))
+            caption_ig = f"{ig['caption_ig']}\n\n{hashtags_ig}".strip()
+            telegram_client.send_message(f"📸 Caption Instagram:\n\n{caption_ig}")
+        except Exception as e:
+            telegram_client.send_message(
+                f"No pude escribir el caption de Instagram ({e}). Sigo solo con las "
+                "plataformas restantes; cancelá y reintentá si lo querés incluir."
+            )
+            plataformas = [p for p in plataformas if p != "instagram"]
+            if not plataformas:
+                telegram_client.send_message("No quedó ninguna plataforma para publicar. Nada más que hacer acá.")
+                return
+
+    pregunta = "¿Publico esto en " + " y ".join(_LABEL_PLATAFORMA[p] for p in plataformas) + "?"
+
+    if formato in ("video", "reel", "reel_tips", "demo"):
         video_path = folder / "video.mp4"
-        message_id = telegram_client.send_video_preview(video_path, caption)
+        message_id = telegram_client.send_video_preview(video_path, caption_tiktok, pregunta=pregunta)
+        # 'reel_tips' usa el contenido de 'sabías que...?' (sin caso de
+        # cliente): trae 'tema' en vez de 'negocio', a diferencia de video/reel.
         _pending = {
             "message_id": message_id,
             "folder": folder,
-            "formato": "video",
+            "formato": formato,
             "video_path": video_path,
-            "title": content["negocio"],
-            "caption": caption,
+            "title": content.get("negocio") or content.get("tema", ""),
+            "caption_tiktok": caption_tiktok,
+            "caption_ig": caption_ig,
+            "plataformas": plataformas,
         }
         return
 
     images = sorted(folder.glob("[0-9][0-9]_*.png"))
-    message_id = telegram_client.send_preview(images, caption)
+    message_id = telegram_client.send_preview(images, caption_tiktok, pregunta=pregunta)
     _pending = {
         "message_id": message_id,
         "folder": folder,
         "formato": "carrusel",
         "images": images,
         "title": content["slides"][0]["titular"],
-        "caption": caption,
+        "caption_tiktok": caption_tiktok,
+        "caption_ig": caption_ig,
+        "plataformas": plataformas,
     }
 
 
+def _pieza_incompleta(folder, content: dict) -> str | None:
+    """Devuelve un mensaje de error si a `folder` le faltan los archivos que
+    su contenido.json dice que debería tener (por ejemplo, una generación que
+    se cortó a mitad de camino por un error de red o de la IA de imágenes),
+    o None si está completa y lista para mandar a aprobar."""
+    formato = content.get("formato", "carrusel")
+    if formato in ("video", "reel", "reel_tips", "demo"):
+        video_path = folder / "video.mp4"
+        if not video_path.exists() or video_path.stat().st_size == 0:
+            return f"falta o quedó vacío {video_path.name}"
+        return None
+
+    esperadas = len(content.get("slides", []))
+    encontradas = sorted(folder.glob("[0-9][0-9]_*.png"))
+    if not encontradas:
+        return "no hay ninguna slide renderizada"
+    if esperadas and len(encontradas) != esperadas:
+        return f"debería tener {esperadas} slides y solo hay {len(encontradas)}"
+    return None
+
+
 def _handle_publicar() -> None:
-    """Manda a aprobar la última pieza ya generada, sin volver a generarla."""
+    """Manda a aprobar la última pieza ya generada y completa, sin volver a
+    generarla. Si la más reciente quedó a medio generar, la saltea y sigue
+    buscando hacia atrás en vez de romper al mandar la vista previa."""
     if _pending is not None:
         telegram_client.send_message(
             "Ya hay una pieza esperando tu aprobación. Aprobala o cancelala primero."
@@ -252,9 +498,24 @@ def _handle_publicar() -> None:
         telegram_client.send_message("No hay ninguna pieza generada en output/. Usá /generar primero.")
         return
 
-    folder = carpetas[-1]
-    telegram_client.send_message(f"Mandando a aprobar: {folder.name}")
-    _enviar_a_aprobar(folder)
+    for folder in reversed(carpetas):
+        content = json.loads((folder / "contenido.json").read_text(encoding="utf-8"))
+        error = _pieza_incompleta(folder, content)
+        if error is None:
+            # Piezas generadas antes de que existiera Instagram (o vía el
+            # atajo rápido /generar [pilar], que sigue siendo solo TikTok) no
+            # tienen esta clave: default a TikTok para no cambiarles el
+            # comportamiento.
+            plataformas = content.get("plataformas", ["tiktok"])
+            telegram_client.send_message(f"Mandando a aprobar: {folder.name}")
+            _enviar_a_aprobar(folder, plataformas)
+            return
+        print(f"  (/publicar: salteo {folder.name}, {error})")
+
+    telegram_client.send_message(
+        "Ninguna pieza en output/ está completa (todas parecen haberse cortado a mitad de "
+        "generación). Usá /generar para crear una nueva."
+    )
 
 
 def _handle_metricas() -> None:
@@ -316,6 +577,36 @@ def _handle_metricas() -> None:
     telegram_client.send_message("\n".join(lineas))
 
 
+def _mostrar_opciones_angulo(pillar_key: str) -> bool:
+    """Paso compartido del wizard: sortea una muestra de ángulos para
+    `pillar_key`, la deja en _wizard y manda los botones para elegir uno.
+    Usado tanto tras elegir pilar (campo 'pilar') como en el atajo de
+    'reel_tips' (campo 'formato'), que se salta la pantalla de pilar porque
+    está fijo a 'sabias_que'. Devuelve False (y avisa por Telegram) si el
+    pilar todavía no tiene ángulos generados — el caller decide qué hacer con
+    el wizard en ese caso (cerrarlo)."""
+    pillar = PILLARS[pillar_key]
+    _wizard["pilar_key"] = pillar_key
+
+    opciones = angulos.muestra(pillar_key, _ANGULO_OPCIONES_WIZARD)
+    if not opciones:
+        telegram_client.send_message(
+            f"Todavía no hay ángulos generados para '{pillar['label']}'. "
+            f"Corré: python refrescar_angulos.py {pillar_key}"
+        )
+        return False
+
+    _wizard["angulo_opciones"] = opciones
+    botones = [
+        [(f"{i + 1}. {_truncar(a, _ANGULO_MAX_LEN)}", f"wz|angulo|{i}")]
+        for i, a in enumerate(opciones)
+    ]
+    botones.append([("🎲 Cualquiera", "wz|angulo|random")])
+    botones.append(_BOTON_CANCELAR)
+    _wizard["message_id"] = telegram_client.send_choice(f"Pilar: {pillar['label']}. ¿Qué ángulo?", botones)
+    return True
+
+
 def _handle_wizard_callback(cq: dict) -> None:
     global _wizard
     telegram_client.answer_callback(cq["id"])
@@ -326,42 +617,47 @@ def _handle_wizard_callback(cq: dict) -> None:
 
     _, campo, valor = cq["data"].split("|", 2)
 
+    if campo == "cancelar":
+        _wizard = None
+        telegram_client.send_message("Wizard cancelado.")
+        return
+
+    if campo == "plataforma":
+        _wizard["plataformas"] = ["tiktok", "instagram"] if valor == "ambas" else [valor]
+        botones = [
+            [("🖼️ Carrusel de imágenes", "wz|formato|carrusel")],
+            [("🎬 Video narrado (voz + b-roll)", "wz|formato|video")],
+            [("📱 Reel (texto en pantalla, sin voz)", "wz|formato|reel")],
+            [("🎨 Reel aesthetic (fondo laptop+café + tarjetas)", "wz|formato|reel_tips")],
+            [("⚡ Demo animado (gráficos del producto andando)", "wz|formato|demo")],
+            _BOTON_CANCELAR,
+        ]
+        _wizard["message_id"] = telegram_client.send_choice("¿Qué formato querés generar?", botones)
+        return
+
     if campo == "formato":
         _wizard["formato"] = valor
-        pilares = PILARES_VIDEO if valor == "video" else list(PILLARS.keys())
+        if valor == "reel_tips":
+            # Fijo al pilar 'sabias_que' (el único cuyo contenido, un dato o
+            # consejo suelto sin caso de cliente, calza con una tarjeta
+            # individual): no tiene sentido preguntar el pilar acá.
+            _mostrar_opciones_angulo("sabias_que")
+            return
+        pilares = PILARES_VIDEO if valor in ("video", "reel", "demo") else list(PILLARS.keys())
         botones = [
             [(f"{PILLARS[key].get('emoji', '')} {PILLARS[key]['label']}".strip(), f"wz|pilar|{key}")]
             for key in pilares
         ]
         botones.append([("🎲 Sorpréndeme", "wz|pilar|random")])
+        botones.append(_BOTON_CANCELAR)
         _wizard["message_id"] = telegram_client.send_choice("¿Qué querés generar?", botones)
         return
 
     if campo == "pilar":
-        pilares = PILARES_VIDEO if _wizard["formato"] == "video" else list(PILLARS.keys())
-        if valor == "random":
-            pillar_key = random.choice(pilares)
-        else:
-            pillar_key = valor
-        pillar = PILLARS[pillar_key]
-        _wizard["pilar_key"] = pillar_key
-
-        opciones = angulos.muestra(pillar_key, _ANGULO_OPCIONES_WIZARD)
-        if not opciones:
-            telegram_client.send_message(
-                f"Todavía no hay ángulos generados para '{pillar['label']}'. "
-                f"Corré: python refrescar_angulos.py {pillar_key}"
-            )
+        pilares = PILARES_VIDEO if _wizard["formato"] in ("video", "reel", "demo") else list(PILLARS.keys())
+        pillar_key = random.choice(pilares) if valor == "random" else valor
+        if not _mostrar_opciones_angulo(pillar_key):
             _wizard = None
-            return
-
-        _wizard["angulo_opciones"] = opciones
-        botones = [
-            [(f"{i + 1}. {_truncar(a, _ANGULO_MAX_LEN)}", f"wz|angulo|{i}")]
-            for i, a in enumerate(opciones)
-        ]
-        botones.append([("🎲 Cualquiera", "wz|angulo|random")])
-        _wizard["message_id"] = telegram_client.send_choice(f"Pilar: {pillar['label']}. ¿Qué ángulo?", botones)
         return
 
     if campo == "angulo":
@@ -370,8 +666,29 @@ def _handle_wizard_callback(cq: dict) -> None:
 
         if _wizard["formato"] == "video":
             pillar_key = _wizard["pilar_key"]
+            plataformas = _wizard["plataformas"]
             _wizard = None
-            _lanzar_generacion_video(pillar_key, angulo)
+            _lanzar_generacion_video(pillar_key, angulo, plataformas)
+            return
+
+        if _wizard["formato"] == "reel":
+            pillar_key = _wizard["pilar_key"]
+            plataformas = _wizard["plataformas"]
+            _wizard = None
+            _lanzar_generacion_reel(pillar_key, angulo, plataformas)
+            return
+
+        if _wizard["formato"] == "demo":
+            pillar_key = _wizard["pilar_key"]
+            plataformas = _wizard["plataformas"]
+            _wizard = None
+            _lanzar_generacion_demo(pillar_key, angulo, plataformas)
+            return
+
+        if _wizard["formato"] == "reel_tips":
+            plataformas = _wizard["plataformas"]
+            _wizard = None
+            _lanzar_generacion_tip_reel(angulo, plataformas)
             return
 
         if pillar.get("formato") in ("chisme", "impacto"):
@@ -380,12 +697,13 @@ def _handle_wizard_callback(cq: dict) -> None:
             # caso/humor/sabías que), así que no tiene sentido preguntar
             # "¿incluir foto IA?": se genera directo.
             pillar_key = _wizard["pilar_key"]
+            plataformas = _wizard["plataformas"]
             _wizard = None
-            _lanzar_generacion(pillar_key, angulo, con_foto=False)
+            _lanzar_generacion(pillar_key, angulo, con_foto=False, plataformas=plataformas)
             return
 
         _wizard["angulo"] = angulo
-        botones = [[("✅ Sí", "wz|foto|si"), ("🚫 No", "wz|foto|no")]]
+        botones = [[("✅ Sí", "wz|foto|si"), ("🚫 No", "wz|foto|no")], _BOTON_CANCELAR]
         _wizard["message_id"] = telegram_client.send_choice(
             "¿Incluir una foto generada por IA en alguna slide? "
             "(gratis, pero la calidad es despareja)",
@@ -397,16 +715,22 @@ def _handle_wizard_callback(cq: dict) -> None:
         pillar_key = _wizard["pilar_key"]
         angulo = _wizard["angulo"]
         con_foto = valor == "si"
+        plataformas = _wizard["plataformas"]
         _wizard = None
-        _lanzar_generacion(pillar_key, angulo, con_foto)
+        _lanzar_generacion(pillar_key, angulo, con_foto, plataformas)
         return
 
 
 def _handle_callback(cq: dict) -> None:
-    global _pending
+    global _pending, _ultima_publicacion
 
-    if cq.get("data", "").startswith("wz|"):
+    data = cq.get("data", "")
+    if data.startswith("wz|"):
         _handle_wizard_callback(cq)
+        return
+
+    if data.startswith("retry|"):
+        _handle_retry_callback(cq)
         return
 
     if _pending is None or cq.get("message", {}).get("message_id") != _pending["message_id"]:
@@ -422,10 +746,50 @@ def _handle_callback(cq: dict) -> None:
         telegram_client.send_message("Cancelado, no se publica nada.")
         return
 
-    es_video = pending.get("formato") == "video"
+    es_video = pending.get("formato") in ("video", "reel", "reel_tips", "demo")
+    plataformas = pending.get("plataformas", ["tiktok"])
+    # Se guarda para que el botón "🔁 Reintentar" de una falla de subida
+    # pueda repetir el intento sin generar ni aprobar de nuevo.
+    _ultima_publicacion = pending
+
+    # Cada plataforma se intenta de forma independiente: que falle TikTok no
+    # tiene que frenar Instagram, ni al revés (son APIs separadas, con
+    # motivos de falla separados).
+    if "tiktok" in plataformas:
+        _publicar_en_tiktok(pending, es_video)
+    if "instagram" in plataformas:
+        _publicar_en_instagram(pending, es_video)
+
+
+def _handle_retry_callback(cq: dict) -> None:
+    """Callback del botón "🔁 Reintentar" que se cuelga de un mensaje de falla
+    (ver _publicar_en_tiktok/_publicar_en_instagram). Reintenta SOLO esa
+    plataforma, reusando _ultima_publicacion en vez de pedir generar o
+    aprobar de nuevo."""
+    telegram_client.answer_callback(cq["id"])
+    message_id = cq.get("message", {}).get("message_id")
+    if message_id is not None:
+        telegram_client.clear_keyboard(message_id)
+
+    if _ultima_publicacion is None:
+        telegram_client.send_message(
+            "No tengo nada guardado para reintentar (¿se reinició el bot hace mucho después de la "
+            "falla?). Usá /publicar para retomar la última pieza generada."
+        )
+        return
+
+    _, plataforma = cq["data"].split("|", 1)
+    es_video = _ultima_publicacion.get("formato") in ("video", "reel", "reel_tips", "demo")
+    if plataforma == "tiktok":
+        _publicar_en_tiktok(_ultima_publicacion, es_video)
+    elif plataforma == "instagram":
+        _publicar_en_instagram(_ultima_publicacion, es_video)
+
+
+def _publicar_en_tiktok(pending: dict, es_video: bool) -> None:
     telegram_client.send_message(
-        "Aprobado. Subiendo el video a TikTok..." if es_video else
-        "Aprobado. Alojando las imágenes y subiendo a TikTok..."
+        "Subiendo el video a TikTok..." if es_video else
+        "Alojando las imágenes y subiendo a TikTok..."
     )
     try:
         access_token = tiktok_client.get_access_token()
@@ -433,10 +797,14 @@ def _handle_callback(cq: dict) -> None:
             publish_id = tiktok_client.upload_video_to_inbox(pending["video_path"], access_token)
         else:
             image_urls = content_hosting.publish_images(pending["images"])
-            publish_id = tiktok_client.post_photos_to_inbox(image_urls, pending["title"], pending["caption"], access_token)
+            publish_id = tiktok_client.post_photos_to_inbox(
+                image_urls, pending["title"], pending["caption_tiktok"], access_token
+            )
         status = tiktok_client.wait_for_publish(publish_id, access_token)
     except Exception as e:
-        telegram_client.send_message(f"Falló la subida a TikTok: {e}")
+        telegram_client.send_choice(
+            f"Falló la subida a TikTok: {e}", [[("🔁 Reintentar en TikTok", "retry|tiktok")]]
+        )
         return
 
     if status == "SEND_TO_USER_INBOX":
@@ -448,7 +816,41 @@ def _handle_callback(cq: dict) -> None:
     elif status == "PUBLISH_COMPLETE":
         telegram_client.send_message("Publicado en TikTok.")
     else:
-        telegram_client.send_message(f"Estado final: {status}")
+        telegram_client.send_choice(
+            f"TikTok, estado final: {status}", [[("🔁 Reintentar en TikTok", "retry|tiktok")]]
+        )
+
+
+def _publicar_en_instagram(pending: dict, es_video: bool) -> None:
+    """A diferencia de TikTok, la Graph API de Instagram no tiene modo
+    borrador: esto publica directo. Un carrusel sube como carrusel de feed
+    (4:5, ver instagram_render.build_feed_images) + una Story con la
+    portada; un video sube como Reel + esa misma Story."""
+    telegram_client.send_message("Subiendo a Instagram...")
+    caption_ig = pending.get("caption_ig") or pending["caption_tiktok"]
+    try:
+        if es_video:
+            video_url = content_hosting.publish_video(pending["video_path"])
+            instagram_client.publish_reel(video_url, caption_ig)
+            instagram_client.publish_story_video(video_url)
+        else:
+            content = json.loads((pending["folder"] / "contenido.json").read_text(encoding="utf-8"))
+            feed_images = instagram_render.build_feed_images(pending["folder"], content.get("paleta", ""))
+            feed_urls = content_hosting.publish_images(feed_images)
+            instagram_client.publish_feed_carousel(feed_urls, caption_ig)
+            story_path = instagram_render.story_image(pending["folder"])
+            story_url = content_hosting.publish_images([story_path])[0]
+            instagram_client.publish_story_image(story_url)
+    except Exception as e:
+        telegram_client.send_choice(
+            f"Falló la subida a Instagram: {e}", [[("🔁 Reintentar en Instagram", "retry|instagram")]]
+        )
+        return
+
+    telegram_client.send_message(
+        "Publicado en Instagram (Reel + Story)." if es_video else
+        "Publicado en Instagram (carrusel de feed + Story)."
+    )
 
 
 def _handle_message(message: dict) -> None:
@@ -469,6 +871,7 @@ def main() -> None:
     if not ALLOWED_CHAT_ID:
         raise SystemExit("Falta TELEGRAM_CHAT_ID en tu .env.")
 
+    _cargar_estado()
     print("Bot corriendo. Mandale /ayuda al bot de Telegram para ver los comandos. Ctrl+C para frenar.")
     offset = None
 
@@ -507,6 +910,11 @@ def main() -> None:
             except Exception:
                 traceback.print_exc()
                 telegram_client.send_message("Ocurrió un error inesperado, revisá la consola del bot.")
+            finally:
+                # Punto único de persistencia: cubre cualquier cambio a
+                # _pending/_wizard/_ultima_publicacion que haya hecho el
+                # handler de arriba, se haya colgado en una excepción o no.
+                _guardar_estado()
 
 
 if __name__ == "__main__":

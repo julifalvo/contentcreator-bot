@@ -77,7 +77,7 @@ def send_message(text: str) -> None:
     _call("sendMessage", data={"chat_id": _chat_id(), "text": text})
 
 
-def _mandar_botones_aprobar() -> int:
+def _mandar_botones_aprobar(pregunta: str) -> int:
     """El mensaje con Aprobar/Cancelar que sigue a la vista previa (imágenes o
     video). Devuelve el message_id, para identificar la respuesta después."""
     keyboard = {
@@ -90,14 +90,14 @@ def _mandar_botones_aprobar() -> int:
         "sendMessage",
         data={
             "chat_id": _chat_id(),
-            "text": "¿Publico esto en TikTok?",
+            "text": pregunta,
             "reply_markup": json.dumps(keyboard),
         },
     )
     return result["message_id"]
 
 
-def send_preview(images: list[Path], caption: str) -> int:
+def send_preview(images: list[Path], caption: str, pregunta: str = "¿Publico esto en TikTok?") -> int:
     """Manda las imágenes como álbum y un mensaje con botones Aprobar/Cancelar.
 
     Se mandan como 'document' en vez de 'photo': Telegram recomprime a JPEG
@@ -130,10 +130,10 @@ def send_preview(images: list[Path], caption: str) -> int:
             for fh in open_files:
                 fh.close()
 
-    return _mandar_botones_aprobar()
+    return _mandar_botones_aprobar(pregunta)
 
 
-def send_video_preview(video_path: Path, caption: str) -> int:
+def send_video_preview(video_path: Path, caption: str, pregunta: str = "¿Publico esto en TikTok?") -> int:
     """Manda el video narrado como vista previa y el mensaje con botones
     Aprobar/Cancelar. Igual que send_preview() pero para el formato de video
     (un solo archivo en vez de álbum de fotos)."""
@@ -144,7 +144,7 @@ def send_video_preview(video_path: Path, caption: str) -> int:
             files={"video": (video_path.name, fh, "video/mp4")},
         )
 
-    return _mandar_botones_aprobar()
+    return _mandar_botones_aprobar(pregunta)
 
 
 def send_choice(text: str, rows: list[list[tuple[str, str]]]) -> int:

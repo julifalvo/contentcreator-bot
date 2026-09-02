@@ -44,6 +44,56 @@ def _wait_until_live(url: str, timeout_sec: int = 120) -> None:
     raise TimeoutError(f"{url} no quedó accesible a tiempo (¿tardó de más en desplegar GitHub Pages?)")
 
 
+def _commit_and_push(mensaje: str) -> None:
+    _run_git("add", "content")
+    commit = _run_git("commit", "-m", mensaje)
+    if commit.returncode != 0 and "nothing to commit" not in commit.stdout:
+        raise RuntimeError(f"git commit falló:\n{commit.stderr}")
+
+    push = _run_git("push", "origin", "main")
+    if push.returncode != 0:
+        raise RuntimeError(f"git push falló:\n{push.stderr}")
+
+
+def _purgar_tandas_viejas() -> None:
+    """Conserva las _CONSERVAR tandas más recientes (de cualquier tipo,
+    fotos o video) además de la que se acaba de crear."""
+    tandas = sorted((p for p in CONTENT_DIR.iterdir() if p.is_dir()), key=lambda p: p.name)
+    for vieja in tandas[:-(_CONSERVAR + 1)]:
+        shutil.rmtree(vieja, ignore_errors=True)
+
+
+def publish_video(video_path: Path) -> str:
+    """Sube un .mp4 al mismo repo de hosting que publish_images() y devuelve
+    su URL pública. Hace falta para Instagram (Reels y Stories de video): a
+    diferencia de TikTok (que acepta subir el archivo directo), la Graph API
+    de contenido solo admite video_url apuntando a una URL pública, igual que
+    ya exige para las fotos del carrusel."""
+    if not REPO_DIR.exists():
+        raise RuntimeError(
+            f"No existe {REPO_DIR}. Cloná el repo de hosting una vez con:\n"
+            f"  git clone https://github.com/julifalvo/rootbusinessai-legal.git {REPO_DIR}"
+        )
+
+    _run_git("pull", "--ff-only", "origin", "main")
+
+    CONTENT_DIR.mkdir(exist_ok=True)
+    # Sufijo "-v" para no colisionar con una tanda de fotos creada en el
+    # mismo segundo cuando una pieza se publica en TikTok e Instagram juntos.
+    tanda = datetime.now().strftime("%Y%m%d-%H%M%S") + "-v"
+    tanda_dir = CONTENT_DIR / tanda
+    tanda_dir.mkdir(exist_ok=True)
+
+    name = "video.mp4"
+    shutil.copyfile(video_path, tanda_dir / name)
+    url = f"{PUBLIC_BASE_URL}/{tanda}/{name}"
+
+    _purgar_tandas_viejas()
+    _commit_and_push(f"Publica video {tanda}")
+    _wait_until_live(url)
+    return url
+
+
 def publish_images(image_paths: list[Path]) -> list[str]:
     """Convierte a JPEG, sube al repo de hosting y devuelve las URLs públicas
     en el mismo orden que image_paths.
@@ -88,20 +138,7 @@ def publish_images(image_paths: list[Path]) -> list[str]:
         img.save(tanda_dir / name, "JPEG", quality=95, subsampling=0)
         urls.append(f"{PUBLIC_BASE_URL}/{tanda}/{name}")
 
-    # Purga tandas viejas (se conservan las _CONSERVAR más recientes además
-    # de la que se acaba de crear) para no acumular publicaciones para siempre.
-    tandas = sorted((p for p in CONTENT_DIR.iterdir() if p.is_dir()), key=lambda p: p.name)
-    for vieja in tandas[:-(_CONSERVAR + 1)]:
-        shutil.rmtree(vieja, ignore_errors=True)
-
-    _run_git("add", "content")
-    commit = _run_git("commit", "-m", f"Publica tanda {tanda}")
-    if commit.returncode != 0 and "nothing to commit" not in commit.stdout:
-        raise RuntimeError(f"git commit falló:\n{commit.stderr}")
-
-    push = _run_git("push", "origin", "main")
-    if push.returncode != 0:
-        raise RuntimeError(f"git push falló:\n{push.stderr}")
-
+    _purgar_tandas_viejas()
+    _commit_and_push(f"Publica tanda {tanda}")
     _wait_until_live(urls[0])
     return urls

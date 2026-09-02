@@ -1,0 +1,11 @@
+- [🎯 Objetivo Comercial]: [Definir si busca atraer tráfico frío, educar al lead tibio o romper objeciones].
+- [🪝 El Hook (0-3s)]: 
+  - Visual: [Qué se ve en cámara, nada de videos genericos de gente sin sentido].
+  - Texto en Pantalla: "[Frase corta y ganchera]".
+  - Audio (Voz en off): "[Frase hablada que rompa el patrón]".
+- [⚡ El Desarrollo (El Valor en 15-30s)]: 
+  - [Guion conciso, directo al grano, sin paja, con indicaciones de cortes o apoyos visuales].
+- [💬 El CTA de Conversión]: 
+  - [Llamado a la acción específico para comentarios, guardados o derivación a DM].
+- [📝 Caption Sugerido]: 
+  - [Texto para la descripción optimizado con palabras clave y estructura limpia].

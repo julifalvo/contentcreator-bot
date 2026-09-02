@@ -53,9 +53,12 @@ Pipeline común:
    caption) se manda a un chat de Telegram y espera un botón de
    aprobar/cancelar antes de publicar nada.
 3. **Publicación** (`tiktok_client.py`): sube el contenido a TikTok vía la
-   Content Posting API (carrusel de fotos o video, según el formato).
+   Content Posting API (carrusel de fotos o video, según el formato). Si el
+   wizard eligió Instagram (o ambas), también sube ahí (`instagram_client.py`,
+   Graph API) — ver la sección **Instagram** más abajo.
 4. **Bot en vivo** (`bot.py`): corre todo el pipeline a demanda desde
-   Telegram (`/generar` abre un wizard con botones; `/publicar`, `/pilares`,
+   Telegram (`/generar` abre un wizard con botones — primero dónde publicás,
+   TikTok/Instagram/ambas, después el resto; `/publicar`, `/pilares`,
    `/metricas`, `/ayuda`), sin tocar la terminal.
 5. **Realimentación** (`tiktok_metrics.py` + `rendimiento.py`): se traen las
    vistas reales de lo ya publicado (Display API de TikTok) y se cruzan con
@@ -86,6 +89,54 @@ Aparte, `scrapecreators_client.py` es una herramienta de investigación de
 competencia (perfiles/posts de TikTok) para inspirar ángulos nuevos — no es
 parte del flujo de `/generar`, se corre suelta.
 
+## Instagram
+
+Desde el wizard de `/generar` podés elegir publicar en Instagram además de
+(o en vez de) TikTok. No reprocesa el contenido desde cero: reusa el mismo
+carrusel o video ya generado y lo adapta al formato de cada plataforma.
+
+- **Carrusel de feed**: las mismas slides, adaptadas de 9:16 a 4:5 (1080x1350
+  — lo que exige la Graph API para carrusel) en `instagram_render.py`. En vez
+  de rehacer el layout editorial a otra altura, hace *pillarbox*: escala el
+  PNG completo y lo centra sobre un lienzo del mismo color de papel de la
+  paleta de la pieza, así los márgenes se leen como diseño, no como recorte.
+- **Reel**: el mismo `video.mp4` del formato video narrado, que ya es 9:16
+  nativo — sin reprocesar.
+- **Story**: automática además de lo anterior (no se pregunta aparte en el
+  wizard): la portada como imagen si generaste un carrusel, o el mismo Reel
+  si generaste video.
+- **Caption**: se reescribe aparte del de TikTok (`content_rules.SYSTEM_PROMPT_IG_CAPTION`,
+  `generate_ig_caption()`), porque las convenciones de cada plataforma son
+  distintas — Instagram trunca a ~125 caracteres antes de "más", pesa
+  guardados/compartidos por sobre likes, y funciona mejor con menos hashtags
+  (3 a 8) más específicos en vez de una lista larga de genéricos. **Esto NO
+  son tendencias en vivo**: no hay ninguna fuente de datos conectada que
+  consulte qué hashtag o audio está explotando hoy — son convenciones de
+  formato/algoritmo estables, escritas en el prompt igual que las reglas de
+  TikTok.
+- **Publicación**: a diferencia de TikTok, la Graph API de Instagram no tiene
+  modo "borrador al inbox" — aprobar en Telegram publica directo en la
+  cuenta, sin paso manual en la app.
+
+Setup (además de las variables de `.env.example`):
+
+1. La cuenta de Instagram tiene que ser Business o Creator, vinculada a una
+   Página de Facebook.
+2. Creá una app en [Meta for Developers](https://developers.facebook.com/apps)
+   (tipo "Business") con el producto "Instagram Graph API", y cargá
+   `META_APP_ID` / `META_APP_SECRET` en tu `.env`.
+3. Corré `python instagram_auth.py` una vez (te pide pegar un token corto
+   sacado del [Graph API Explorer](https://developers.facebook.com/tools/explorer/)
+   con los permisos `instagram_basic`, `instagram_content_publish`,
+   `pages_show_list`, `pages_read_engagement`, `business_management`) — lo
+   cambia por uno de larga duración y guarda la sesión en `ig_tokens.json`
+   (no se commitea).
+
+El hosting público que ya usa el carrusel de fotos de TikTok
+(`content_hosting.py`, GitHub Pages) se reutiliza para las imágenes 4:5 y
+también para el video del Reel/Story — la Graph API, igual que la de fotos de
+TikTok, exige una URL pública en vez de aceptar el archivo subido directo.
+
 ## Setup
 
 ```bash
@@ -112,6 +163,10 @@ Variables necesarias en `.env` (ver `.env.example` para el detalle de cada una):
 - Opcionales, solo para el formato **video narrado**: `PEXELS_API_KEY` (b-roll,
   gratis) y `ELEVENLABS_API_KEY` (locución, free tier). Sin estas dos, el bot
   funciona igual pero ese formato no está disponible.
+- Opcionales, solo para publicar en **Instagram**: `META_APP_ID` y
+  `META_APP_SECRET` (ver la sección Instagram más arriba). Sin esto el bot
+  funciona igual, solo que el wizard de `/generar` solo puede publicar en
+  TikTok.
 - Opcional, solo para investigación de competencia: `SCRAPECREATORS_API_KEY`
   (de pago, no tiene free tier — no hace falta para `/generar`).
 
@@ -147,8 +202,8 @@ repartido entre las intenciones que soporta el pilar.
 Desde Telegram, con el bot corriendo:
 
 ```
-/generar            abre un wizard: formato -> pilar -> ángulo -> ¿foto IA?
-/generar [pilar]     atajo rápido: carrusel con ese pilar, ángulo y rubro al azar
+/generar            abre un wizard: plataforma -> formato -> pilar -> ángulo -> ¿foto IA?
+/generar [pilar]     atajo rápido: carrusel con ese pilar, ángulo y rubro al azar, solo TikTok
 /publicar           manda a aprobar la última pieza generada (sin regenerar)
 /pilares             lista los pilares y con qué intención se cuenta cada uno
 /metricas           seguidores, top 5 por vistas y rendimiento por pilar e intención
@@ -156,6 +211,10 @@ Desde Telegram, con el bot corriendo:
 ```
 
 ## Costo
+
+Instagram no suma costo: la Graph API es gratis, la app de Meta for Developers
+es gratis, y el hosting de imágenes/video reusa el mismo repo de GitHub Pages
+que ya usa TikTok.
 
 El carrusel (con o sin humor, con o sin foto) es 100% gratis: Groq/Gemini,
 Cloudflare Workers AI, Pollinations y el render local no piden tarjeta. El video narrado también es

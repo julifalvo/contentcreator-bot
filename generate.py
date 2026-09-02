@@ -34,14 +34,16 @@ for _stream in (sys.stdout, sys.stderr):
 
 import angulos
 import audiencia
+import demo_build
 import design
 import image_gen
 import mockups
+import reel_build
 import render
 import video_narrado
 from ai_providers import (
-    generate_carousel, generate_chisme, generate_humor, generate_impacto,
-    generate_sabias_que, generate_video_script,
+    generate_carousel, generate_chisme, generate_demo, generate_humor, generate_ig_caption,
+    generate_impacto, generate_reel, generate_sabias_que, generate_video_script,
 )
 from config import INTENCIONES, PILLARS, RUBROS
 
@@ -183,6 +185,130 @@ HASHTAGS:
     return folder
 
 
+def build_demo_piece(pillar_key: str, angulo: str | None = None) -> Path:
+    """Arma un DEMO animado (ver demo_build.py / demo_designs.py): un video de
+    demostraciones gráficas rápidas de la solución funcionando —un agente
+    contestando, una agenda llenándose, la facturación subiendo— en vez de
+    slides estáticas o b-roll de stock.
+
+    Usa los mismos pilares de caso que el video narrado y el reel (ver
+    PILARES_VIDEO): el guion es el caso de un cliente en tercera persona, y
+    las escenas son lo que se ve de ese caso funcionando."""
+    if pillar_key not in PILARES_VIDEO:
+        raise ValueError(f"El pilar '{pillar_key}' no soporta el formato demo (solo: {PILARES_VIDEO})")
+
+    pillar = PILLARS[pillar_key]
+    angulo = angulo or angulos.elegir_angulo(pillar_key)
+    rubro = random.choice(RUBROS)
+    ctx = audiencia.contexto_de_pieza(pillar_key)
+
+    print(f"→ [demo] {pillar['label']} — {angulo}")
+    print(f"  Rubro: {rubro} · intención: {INTENCIONES[ctx['intencion']]['label']}")
+    data = generate_demo(pillar["label"], angulo, rubro, ctx["bloque"])
+    print(f"  Caso: {data['negocio']} · ancla: {data['ancla']}")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_demo_{slugify(data['negocio'])}"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    escenas = data["escenas"]
+    print(f"  Escenas: {', '.join(e['tipo'] for e in escenas)}")
+    demo_build.build_demo(folder, data)
+
+    hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
+    guion = "\n\n".join(
+        f"Escena {i} ({e['tipo']}): {e.get('titular','')}"
+        + (f"\n  {e['bajada']}" if e.get("bajada") else "")
+        for i, e in enumerate(escenas, 1)
+    )
+    (folder / "contenido.txt").write_text(
+        f"""PILAR: {pillar['label']}
+INTENCIÓN: {INTENCIONES[ctx['intencion']]['label']}
+ÁNGULO: {angulo}
+NEGOCIO: {data['negocio']}
+DETALLE ANCLA: {data['ancla']}
+
+HISTORIA (lo que el demo muestra de punta a punta):
+  {data['historia']}
+
+{guion}
+
+CAPTION PARA TIKTOK:
+  {data['caption']}
+
+HASHTAGS:
+  {hashtag_line}
+""",
+        encoding="utf-8",
+    )
+    (folder / "contenido.json").write_text(
+        json.dumps({**data, "formato": "demo", "pilar": pillar_key, "angulo": angulo,
+                    "intencion": ctx["intencion"], "tension": ctx["tension"]},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    print(f"  ✓ Listo: {folder}")
+    return folder
+
+
+def build_tip_reel_piece(angulo: str | None = None) -> Path:
+    """Arma un Reel 'aesthetic' (formato 'reel_tips', ver reel_build.build_tip_reel):
+    mismo contenido educativo de 'sabías que...?' (generate_sabias_que, sin
+    caso de cliente ni solución puntual) que el carrusel de ese pilar, pero
+    en vez del papel editorial cada slide sale como una tarjeta flotante
+    arriba de un único clip de b-roll "aesthetic" (laptop, café, escritorio)
+    que se repite en todo el video — el look de fondo+popup que pidió este
+    formato. Fijo al pilar 'sabias_que': es el único cuyo contenido (un dato o
+    consejo suelto, sin caso) calza con una tarjeta individual."""
+    pillar_key = "sabias_que"
+    pillar = PILLARS[pillar_key]
+    angulo = angulo or angulos.elegir_angulo(pillar_key)
+    ctx = audiencia.contexto_de_pieza(pillar_key)
+
+    print(f"→ [reel tips] {pillar['label']} — {angulo}")
+    print(f"  Intención: {INTENCIONES[ctx['intencion']]['label']}")
+    data = generate_sabias_que(pillar["label"], angulo, False, ctx["bloque"])
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_reeltips_{slugify(data['tema'])}"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    print(f"  Armando reel ({len(data['slides'])} tarjetas sobre un fondo aesthetic fijo)...")
+    reel_build.build_tip_reel(folder, data)
+
+    hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
+    guion = "\n\n".join(
+        f"Slide {i} ({s['tipo']}): " + " | ".join(f"{k}: {v}" for k, v in s.items() if k != "tipo")
+        for i, s in enumerate(data["slides"], 1)
+    )
+    (folder / "contenido.txt").write_text(
+        f"""PILAR: {pillar['label']}
+INTENCIÓN: {INTENCIONES[ctx['intencion']]['label']}
+ÁNGULO: {angulo}
+TEMA: {data['tema']}
+
+{guion}
+
+CAPTION PARA TIKTOK:
+  {data['caption']}
+
+HASHTAGS:
+  {hashtag_line}
+""",
+        encoding="utf-8",
+    )
+    (folder / "contenido.json").write_text(
+        json.dumps({**data, "formato": "reel_tips", "pilar": pillar_key, "angulo": angulo,
+                    "intencion": ctx["intencion"], "tension": ctx["tension"]},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    print(f"  ✓ Listo: {folder}")
+    return folder
+
+
 def build_video_piece(pillar_key: str, angulo: str | None = None) -> Path:
     """Arma un video narrado (voz de ElevenLabs + b-roll de Pexels) en vez de
     un carrusel de imágenes. Solo para los pilares de caso (no humor, ver
@@ -245,6 +371,102 @@ HASHTAGS:
     return folder
 
 
+def build_reel_piece(pillar_key: str, angulo: str | None = None) -> Path:
+    """Arma un Reel de texto en pantalla (b-roll real de Pexels + texto
+    superpuesto por beat, SIN voz generada por IA — ver reel_rules.py/
+    reel_build.py) en vez de un carrusel o un video narrado. Mismos pilares
+    de caso que el video narrado (ver PILARES_VIDEO)."""
+    if pillar_key not in PILARES_VIDEO:
+        raise ValueError(f"El pilar '{pillar_key}' no soporta el formato reel (solo: {PILARES_VIDEO})")
+
+    pillar = PILLARS[pillar_key]
+    angulo = angulo or angulos.elegir_angulo(pillar_key)
+    rubro = random.choice(RUBROS)
+
+    ctx = audiencia.contexto_de_pieza(pillar_key)
+
+    print(f"→ [reel] {pillar['label']} — {angulo}")
+    print(f"  Rubro: {rubro} · intención: {INTENCIONES[ctx['intencion']]['label']}")
+    data = generate_reel(pillar["label"], angulo, rubro, ctx["bloque"])
+    print(f"  Caso: {data['negocio']} · ancla: {data['ancla']} · objetivo: {data['objetivo_comercial']}")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder = OUTPUT_DIR / f"{timestamp}_{pillar_key}_reel_{slugify(data['negocio'])}"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    beats = [data["hook"], *data["desarrollo"], data["cta"]]
+    print(f"  Armando reel ({len(beats)} beats: b-roll + texto en pantalla, sin voz)...")
+    reel_build.build_reel(folder, data)
+
+    hashtag_line = " ".join(f"#{h.lstrip('#')}" for h in data["hashtags"])
+    guion = "\n\n".join(
+        [f"HOOK: {data['hook']['texto_pantalla']}\n  (visual: {data['hook']['visual']})"]
+        + [
+            f"Desarrollo {i}: {b['texto_pantalla']}\n  (visual: {b['visual']})"
+            for i, b in enumerate(data["desarrollo"], 1)
+        ]
+        + [f"CTA: {data['cta']['texto_pantalla']}\n  (visual: {data['cta']['visual']})"]
+    )
+    (folder / "contenido.txt").write_text(
+        f"""PILAR: {pillar['label']}
+INTENCIÓN: {INTENCIONES[ctx['intencion']]['label']}
+ÁNGULO: {angulo}
+OBJETIVO COMERCIAL: {data['objetivo_comercial']}
+NEGOCIO: {data['negocio']}
+DETALLE ANCLA: {data['ancla']}
+
+HISTORIA (lo que el reel cuenta de punta a punta):
+  {data['historia']}
+
+{guion}
+
+CAPTION PARA TIKTOK:
+  {data['caption']}
+
+HASHTAGS:
+  {hashtag_line}
+""",
+        encoding="utf-8",
+    )
+    (folder / "contenido.json").write_text(
+        json.dumps({**data, "formato": "reel", "pilar": pillar_key, "angulo": angulo,
+                    "intencion": ctx["intencion"], "tension": ctx["tension"]},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    print(f"  ✓ Listo: {folder}")
+    return folder
+
+
+def asegurar_caption_ig(folder: Path) -> dict:
+    """Genera el caption nativo de Instagram (content_rules.SYSTEM_PROMPT_IG_CAPTION)
+    a partir del contenido YA generado para TikTok, y lo cachea en
+    contenido.json para no volver a pedirlo si /publicar reintenta la misma
+    pieza. Devuelve {"caption_ig": ..., "hashtags_ig": [...]}."""
+    content_path = folder / "contenido.json"
+    data = json.loads(content_path.read_text(encoding="utf-8"))
+    if "caption_ig" in data:
+        return {"caption_ig": data["caption_ig"], "hashtags_ig": data["hashtags_ig"]}
+
+    partes = [
+        f"PILAR: {PILLARS.get(data.get('pilar'), {}).get('label', data.get('pilar', ''))}",
+        f"ÁNGULO: {data.get('angulo', '')}",
+    ]
+    if "historia" in data:
+        partes.append(f"NEGOCIO: {data.get('negocio', '')}\nANCLA: {data.get('ancla', '')}\nHISTORIA: {data['historia']}")
+    elif "tema" in data:
+        partes.append(f"TEMA: {data['tema']}")
+    partes.append(f"CAPTION ORIGINAL (TikTok): {data.get('caption', '')}")
+    partes.append(f"HASHTAGS ORIGINALES: {', '.join(data.get('hashtags', []))}")
+
+    ig = generate_ig_caption("\n\n".join(partes))
+    data["caption_ig"] = ig["caption_ig"]
+    data["hashtags_ig"] = ig["hashtags_ig"]
+    content_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return ig
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generador de carruseles TikTok (automatización/IA)")
     parser.add_argument("--pillar", default="random", choices=list(PILLARS) + ["random"],
@@ -252,6 +474,12 @@ def main() -> None:
     parser.add_argument("--count", type=int, default=1, help="Cantidad de piezas a generar")
     parser.add_argument("--foto", action="store_true",
                         help="Permite que el modelo elija una slide de foto real (IA). Off por default.")
+    parser.add_argument("--tip-reel", action="store_true",
+                        help="Genera un Reel 'aesthetic' (fondo laptop+café fijo + tarjetas de 'sabías que...?') "
+                             "en vez de un carrusel. Ignora --pillar/--foto: siempre usa el pilar sabias_que.")
+    parser.add_argument("--demo", action="store_true",
+                        help="Genera un DEMO animado (escenas gráficas rápidas de la solución funcionando) "
+                             "en vez de un carrusel. Usa --pillar (solo pilares de caso).")
     parser.add_argument("--list-pillars", action="store_true", help="Lista los pilares y sale")
     args = parser.parse_args()
 
@@ -262,8 +490,15 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(exist_ok=True)
     for _ in range(args.count):
-        pillar_key = random.choice(list(PILLARS)) if args.pillar == "random" else args.pillar
         try:
+            if args.tip_reel:
+                build_tip_reel_piece()
+                continue
+            if args.demo:
+                pillar_key = random.choice(PILARES_VIDEO) if args.pillar == "random" else args.pillar
+                build_demo_piece(pillar_key)
+                continue
+            pillar_key = random.choice(list(PILLARS)) if args.pillar == "random" else args.pillar
             build_piece(pillar_key, con_foto=args.foto)
         except RuntimeError as e:
             print(f"\n✗ {e}", file=sys.stderr)

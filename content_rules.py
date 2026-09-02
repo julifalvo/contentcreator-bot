@@ -386,13 +386,19 @@ _IMPERATIVOS = [
     (r"\b([Cc])onsulta(\s+tu\b)", r"\1onsultá\2"),
     (r"\b([Pp])rueba(\s+tu\b)", r"\1robá\2"),
     (r"\b([Cc])ompra(\s+tu\b)", r"\1omprá\2"),
-    (r"\b([Cc])otiza\b", r"\1otizá"),
-    (r"\b([Ss])olicita\b", r"\1olicitá"),
-    (r"\b([Dd])escubre\b", r"\1escubrí"),
-    (r"\b([Ee])mpieza\b", r"\1mpezá"),
-    (r"\b([Cc])onoce\b", r"\1onocé"),
-    (r"\b([Rr])egistra\b", r"\1egistrá"),
-    (r"\b([Ii])ngresa\b", r"\1ngresá"),
+    # Estos no admiten el truco del "tu" (un botón dice "Cotizá", a secas), así
+    # que van anclados al ARRANQUE del campo con ^. Sin ese ancla la regla
+    # también pisaba la 3ª persona del indicativo, que se escribe igual: en un
+    # demo narrado en tercera persona, "el agente registra el pedido" salía
+    # como "el agente registrá el pedido", que está mal y se ve enorme en un
+    # titular. Un botón o CTA empieza con el verbo; una oración narrada, no.
+    (r"^([Cc])otiza\b", r"\1otizá"),
+    (r"^([Ss])olicita\b", r"\1olicitá"),
+    (r"^([Dd])escubre\b", r"\1escubrí"),
+    (r"^([Ee])mpieza\b", r"\1mpezá"),
+    (r"^([Cc])onoce\b", r"\1onocé"),
+    (r"^([Rr])egistra\b", r"\1egistrá"),
+    (r"^([Ii])ngresa\b", r"\1ngresá"),
 ]
 
 
@@ -610,3 +616,67 @@ def validate_sabias_que(data: dict, con_foto: bool = False) -> None:
         limpio = h.lstrip("#").strip()
         if len(limpio) < 2 or " " in limpio or not limpio.replace("ñ", "n").isalnum():
             raise ValueError(f"Hashtag inválido: {h!r}")
+
+
+# --- Instagram: caption nativo, a partir del contenido YA generado para
+# TikTok (historia/tema/caption/hashtags) -----------------------------------
+#
+# No vuelve a inventar el caso ni las slides, solo lo reescribe con las
+# convenciones de Instagram, que son bien distintas de las de TikTok:
+# - TikTok premia un caption corto (se lee mientras el video ya arrancó);
+#   Instagram trunca a ~125 caracteres antes de "más", así que el gancho
+#   tiene que cerrar una idea en la primera línea y recién después
+#   desarrollar en formato narrado, con saltos de línea cortos (estética de
+#   feed, no de párrafo).
+# - El algoritmo de Instagram pesa guardados/compartidos por sobre likes: el
+#   cierre pide guardar o compartir, no solo comentar.
+# - La práctica que mejor funciona hoy es MENOS hashtags y más específicos
+#   (3 a 8), mezclando 1-2 amplios de la categoría con el resto de nicho real
+#   de la pieza — un spam de 20 genéricos pesa negativo para el alcance.
+#
+# Ojo: esto NO son tendencias en vivo (el bot no consulta qué hashtag o audio
+# está explotando hoy en Instagram, no hay ninguna fuente de datos conectada
+# para eso). Son las convenciones de formato/algoritmo estables de la
+# plataforma, igual de "hardcodeadas a propósito" que las reglas de TikTok.
+SYSTEM_PROMPT_IG_CAPTION = """Reescribís, para Instagram, el caption de una pieza que YA fue escrita y aprobada para TikTok. No inventás caso ni datos nuevos: partís del resumen que te pasan y lo adaptás al formato nativo de Instagram.
+
+DIFERENCIAS CLAVE CON EL CAPTION DE TIKTOK (por qué no sirve copiarlo tal cual):
+- Instagram trunca el caption a ~125 caracteres antes de mostrar "más": la PRIMERA LÍNEA tiene que funcionar sola como gancho completo, no cortada a la mitad de una idea.
+- Instagram premia guardados y compartidos por sobre likes: el cierre invita a guardar ("guardalo para cuando te pase") o a compartir/etiquetar a quien le sirva, además de comentar.
+- Formato visual de feed: párrafos cortos (1-3 líneas) separados por salto de línea, no un bloque compacto. Como mucho 1 o 2 emojis si suman, nunca de relleno ni uno por línea.
+- Cierra siempre con una pregunta o invitación concreta relacionada al caso, igual de específica que en TikTok — nada de "¿qué opinás?" genérico.
+
+IDIOMA: castellano rioplatense, voseo siempre (perdés, tenés, escribime, contame). Mismas reglas de fondo que el original: mantené la misma voz narrativa que ya tenía (caso de un cliente contado en tercera persona, o segunda persona si es humor, según corresponda), sin promesas exageradas, sin ofertas ni precios inventados, sin lenguaje de marketing vacío.
+
+HASHTAGS — entre 3 y 8 (no más): mezclá 1-2 amplios de negocios/tecnología/IA en español con el resto bien específicos de ESTA pieza puntual (rubro, problema concreto). Solo letras/números, sin espacios.
+
+RESPONDÉ SOLO con este JSON, sin texto ni markdown alrededor:
+{"caption_ig":"el caption para Instagram, con saltos de línea reales (\\n) entre párrafos cortos, sin hashtags adentro","hashtags_ig":["entre 3 y 8, sin #, una palabra cada uno"]}"""
+
+
+def get_ig_caption_system_prompt() -> str:
+    return SYSTEM_PROMPT_IG_CAPTION
+
+
+def validate_ig_caption(data: dict) -> None:
+    for campo in ("caption_ig", "hashtags_ig"):
+        if not data.get(campo):
+            raise ValueError(f"Falta '{campo}'")
+    if len(data["caption_ig"].split()) < 12:
+        raise ValueError("El caption_ig quedó demasiado corto")
+    if not isinstance(data["hashtags_ig"], list) or not (3 <= len(data["hashtags_ig"]) <= 8):
+        raise ValueError(f"Tienen que ser entre 3 y 8 hashtags, llegaron {len(data.get('hashtags_ig') or [])}")
+    for h in data["hashtags_ig"]:
+        limpio = h.lstrip("#").strip()
+        if len(limpio) < 2 or " " in limpio or not limpio.replace("ñ", "n").isalnum():
+            raise ValueError(f"Hashtag inválido: {h!r}")
+    texto = data["caption_ig"].lower()
+    vendedor = [f for f in _TONO_VENDEDOR if f in texto]
+    if vendedor:
+        raise ValueError(f"Tono de vendedor / oferta inventada: {vendedor}")
+    exageradas = [f for f in _PROMESAS_EXAGERADAS if f in texto]
+    if exageradas:
+        raise ValueError(f"Promesa exagerada: {exageradas}")
+    neutro = [f for f in _NO_VOSEO if re.search(rf"\b{re.escape(f)}\b", texto)]
+    if neutro:
+        raise ValueError(f"No está en voseo rioplatense: {neutro}")

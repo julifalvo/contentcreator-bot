@@ -90,15 +90,17 @@ def image_data_uri(path: Path) -> str:
     return f"data:image/{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
-def html_to_png(html: str, out_path: Path) -> Path:
-    """Rinde `html` a un PNG de 1080x1920 (9:16, el tamano que TikTok recomienda para carruseles de fotos)."""
-    # Chrome escribe el screenshot relativo a SU cwd, no al nuestro: si no le
-    # pasamos la ruta absoluta, falla con "no puede encontrar la ruta".
+def _screenshot(html: str, out_path: Path, escala: int = ESCALA_RENDER) -> None:
+    """Le pide a Chrome headless el screenshot de `html` en `out_path`
+    (siempre 1080x1920 a 2x, sin bajar de tamaño ni recomprimir todavía —
+    eso lo hace cada función pública según si necesita conservar el canal
+    alfa o no). Chrome escribe el screenshot relativo a SU cwd, no al
+    nuestro: si no le pasamos la ruta absoluta, falla con "no puede
+    encontrar la ruta"."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path = out_path.resolve()
 
     with tempfile.TemporaryDirectory() as tmp:
-        src = Path(tmp) / "slide.html"
+        src = Path(tmp) / "page.html"
         src.write_text(html, encoding="utf-8")
 
         result = subprocess.run(
@@ -108,7 +110,12 @@ def html_to_png(html: str, out_path: Path) -> Path:
                 "--disable-gpu",
                 "--hide-scrollbars",
                 "--no-sandbox",  # necesario para correr como servicio en Ubuntu
-                f"--force-device-scale-factor={ESCALA_RENDER}",
+                # Perfil propio y descartable por render. Sin esto todas las
+                # instancias comparten el perfil por defecto y Chrome las
+                # serializa esperando el lock: rindiendo frames de video en
+                # paralelo (demo_build.py) eso tiraba la ganancia a cero.
+                f"--user-data-dir={Path(tmp) / 'chrome'}",
+                f"--force-device-scale-factor={escala}",
                 "--default-background-color=00000000",
                 f"--window-size={CANVAS_W},{CANVAS_H}",
                 f"--screenshot={out_path}",
@@ -122,8 +129,49 @@ def html_to_png(html: str, out_path: Path) -> Path:
     if not out_path.exists():
         raise RuntimeError(f"Chrome no generó la imagen:\n{result.stderr[-800:]}")
 
+
+def html_to_png(html: str, out_path: Path) -> Path:
+    """Rinde `html` a un PNG de 1080x1920 (9:16, el tamano que TikTok recomienda para carruseles de fotos)."""
+    out_path = out_path.resolve()
+    _screenshot(html, out_path)
     _bajar_a_final(out_path)
     _recomprimir(out_path)
+    return out_path
+
+
+def html_to_png_transparent(html: str, out_path: Path) -> Path:
+    """Como html_to_png(), pero conserva el canal alfa: para overlays de texto
+    en pantalla que se superponen sobre un video (reel_build.py) en vez de
+    fotos completas. Sin el flatten a RGB de _recomprimir(), que pintaría de
+    negro/blanco todo lo transparente."""
+    out_path = out_path.resolve()
+    _screenshot(html, out_path)
+
+    img = Image.open(out_path)
+    if img.width != ANCHO_FINAL:
+        alto = round(img.height * ANCHO_FINAL / img.width)
+        img = img.resize((ANCHO_FINAL, alto), Image.LANCZOS)
+    img.save(out_path, "PNG", optimize=True, compress_level=9)
+    return out_path
+
+
+def html_to_png_frame(html: str, out_path: Path) -> Path:
+    """Como html_to_png(), pero para FRAMES DE VIDEO (demo_build.py), donde se
+    rinden decenas de imágenes por pieza y después las come ffmpeg.
+
+    Dos atajos respecto de html_to_png(), los dos por costo — acá se rinden
+    cientos de imágenes por pieza, no seis:
+
+    1. Rinde a escala 1 (1080x1920 directo) en vez del supersampling a 2x con
+       bajada Lanczos. Ese 2x existe para que el texto aguante el JPEG y el
+       recompresor de TikTok en una FOTO fija; un frame de video se lo come
+       igual el H.264, y rendir cuatro veces menos píxeles es la diferencia
+       entre un demo que tarda dos minutos y uno que tarda ocho.
+    2. Salta la recompresión lossless de _recomprimir() (zlib al máximo): sirve
+       cuando el PNG es el entregable, pero éste vive unos segundos en una
+       carpeta temporal y termina adentro del mp4."""
+    out_path = out_path.resolve()
+    _screenshot(html, out_path, escala=1)
     return out_path
 
 

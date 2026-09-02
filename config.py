@@ -23,16 +23,46 @@ import random
 # los ejemplos más frecuentes en sus datos de entrenamiento. La IA sigue
 # inventando el caso, el número y la historia; esto solo empuja el escenario.
 RUBROS = [
-    "una panadería de barrio", "una veterinaria", "un estudio contable",
-    "una peluquería", "un gimnasio de barrio", "una óptica",
-    "un vivero", "una ferretería", "un consultorio odontológico",
-    "una escuela de música", "un local de indumentaria", "una cafetería de especialidad",
-    "una inmobiliaria chica", "un centro de estética", "una juguetería",
-    "un taller mecánico", "una guardería de mascotas", "un estudio de tatuajes",
-    "una casa de repuestos", "un instituto de idiomas", "una florería",
-    "un lavadero de autos", "una pinturería", "un estudio de fotografía",
-    "una rotisería", "un kinesiólogo", "una mueblería",
-    "un club de padel", "una librería", "un corralón de materiales",
+    # Comercio de barrio
+    "una panadería de barrio", "una ferretería", "una juguetería",
+    "un local de indumentaria", "una librería", "una florería",
+    "una pinturería", "una mueblería", "una casa de repuestos",
+    "un corralón de materiales", "una vinoteca", "una dietética",
+    "una bicicletería", "una pañalera", "una casa de artículos de limpieza",
+    "un local de celulares y accesorios", "una perfumería",
+    # Gastronomía
+    "una cafetería de especialidad", "una rotisería", "una pizzería de barrio",
+    "una heladería", "una casa de empanadas", "un bar de tapas",
+    "una cervecería artesanal", "una casa de pastas caseras",
+    "un servicio de viandas saludables", "un food truck",
+    # Salud y bienestar
+    "una veterinaria", "un consultorio odontológico", "una óptica",
+    "un kinesiólogo", "un centro de estética", "un nutricionista",
+    "un consultorio de psicología", "un centro de fonoaudiología",
+    "una farmacia de barrio", "un centro de masajes",
+    # Servicios personales
+    "una peluquería", "una barbería", "un estudio de tatuajes",
+    "un salón de uñas", "una guardería de mascotas", "un paseador de perros",
+    "una lavandería", "un taller de costura y arreglos",
+    # Deporte y formación
+    "un gimnasio de barrio", "un club de padel", "una escuela de música",
+    "un instituto de idiomas", "un estudio de yoga", "una escuela de manejo",
+    "un profesor particular de matemática", "una academia de danza",
+    "una colonia de vacaciones",
+    # Oficios y servicios técnicos
+    "un taller mecánico", "un lavadero de autos", "un gomería",
+    "un service de aire acondicionado", "un electricista matriculado",
+    "un plomero", "una empresa de fumigación", "un cerrajero",
+    "un service de electrodomésticos", "una empresa de mudanzas",
+    # Profesionales y B2B
+    "un estudio contable", "un estudio jurídico chico", "una inmobiliaria chica",
+    "un estudio de arquitectura", "una agencia de seguros",
+    "un estudio de fotografía", "una imprenta", "una agencia de viajes",
+    "un servicio de catering para eventos", "un salón de fiestas",
+    "una distribuidora mayorista", "un centro de coworking",
+    # Verde y hogar
+    "un vivero", "un paisajista", "una carpintería a medida",
+    "una empresa de limpieza de oficinas",
 ]
 
 PILLARS = {

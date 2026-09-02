@@ -19,6 +19,7 @@ de una vuelta anterior.
 
 import html
 import random
+import re
 
 import mockups
 
@@ -579,6 +580,138 @@ def _cierre_fondo(s: dict, p: dict) -> str:
 <div class="cierre-fondo-titular">{html.escape(s['titular'])}</div>
 <div class="cierre-fondo-accion">{html.escape(s['accion'])}</div>
 </div>"""
+
+
+# --- Overlay de Reel (formato 'reel', ver reel_build.py): texto en pantalla
+# superpuesto por ffmpeg sobre un clip de b-roll real, en vez de una slide
+# completa sobre papel editorial. El lienzo tiene que salir TRANSPARENTE
+# salvo el velo y el texto -por eso usa su propio HTML chico en vez de
+# _page()/_css(), que pintan un fondo de papel opaco- para que funcione
+# arriba de cualquier clip de video, sea cual sea su color.
+def build_reel_overlay_html(texto: str) -> str:
+    return f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<style>
+@font-face {{
+  font-family: 'Display';
+  src: url('{font_data_uri("PlayfairDisplay-Bold.ttf")}') format('truetype');
+  font-weight: 400 900;
+}}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+html, body {{ width:{CANVAS_W}px; height:{CANVAS_H}px; overflow:hidden; background:transparent; }}
+body {{ position:relative; }}
+.scrim {{
+  position:absolute; left:0; right:0; bottom:0; padding:100px 90px 230px;
+  background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.78) 55%, rgba(0,0,0,.88) 100%);
+}}
+.texto {{
+  font-family:'Display', serif; font-weight:800; font-size:84px; line-height:1.14;
+  color:#FFF9F2; letter-spacing:-.02em; text-shadow:0 6px 24px rgba(0,0,0,.45);
+}}
+</style></head><body>
+<div class="scrim"><div class="texto">{html.escape(texto)}</div></div>
+</body></html>"""
+
+
+# --- Overlay 'popup' de Reel (formato 'reel_tips', ver reel_build.build_tip_reel):
+# a diferencia de build_reel_overlay_html() (texto blanco con velo abajo, para
+# el reel de caso con un clip de b-roll distinto por beat), este overlay es
+# una TARJETA flotante estilo nota/consejo -fondo cálido, kicker con emoji y
+# numerito, remate de la idea resaltado como si fuera un marcador- pensada
+# para ir arriba de UN SOLO clip de b-roll "aesthetic" (laptop+café,
+# escritorio, notebook) que se repite en todo el reel en vez de cambiar por
+# beat. Rinde transparente igual que build_reel_overlay_html: el video de
+# fondo lo pone reel_build.py, acá solo va la tarjeta.
+def _split_remate(cuerpo: str) -> tuple[str, str]:
+    """Separa 'cuerpo' en (intro, remate): el remate es la última oración, la
+    que se resalta con el marcador -igual que el detalle subrayado en las
+    notas tipo consejo que inspiraron este formato. Si el cuerpo es una sola
+    oración no hay intro, todo el texto es el remate."""
+    partes = [p for p in re.split(r"(?<=[.!?])\s+", cuerpo.strip()) if p]
+    if len(partes) < 2:
+        return "", cuerpo.strip()
+    return " ".join(partes[:-1]), partes[-1]
+
+
+def build_popup_overlay_html(
+    titulo: str, cuerpo: str = "", kicker: str = "", emoji: str = "",
+    numero: int | None = None, nota: str = "", palette: dict | None = None,
+) -> str:
+    p = palette or pick_palette()
+    intro, remate = _split_remate(cuerpo) if cuerpo else ("", "")
+
+    emoji_html = f'<span class="badge-emoji">{html.escape(emoji)}</span>' if emoji else ""
+    num_html = f'<div class="badge-num">{numero:02d}</div>' if numero is not None else ""
+    kicker_html = f'<span class="kicker-label">{html.escape(kicker)}</span>' if kicker else ""
+    kicker_row = (
+        f'<div class="kicker-row">{emoji_html}{num_html}{kicker_html}</div>'
+        if (emoji or numero is not None or kicker) else ""
+    )
+
+    cuerpo_html = ""
+    if intro or remate:
+        cuerpo_html = '<div class="popup-cuerpo">'
+        if intro:
+            # El resaltado de marcador solo suma cuando contrasta con el resto
+            # del párrafo (2+ oraciones); en un cuerpo de una sola oración
+            # marcaría el texto entero, que se ve más pesado que un consejo.
+            cuerpo_html += html.escape(intro) + " " + f'<mark>{html.escape(remate)}</mark>'
+        else:
+            cuerpo_html += html.escape(remate)
+        cuerpo_html += "</div>"
+
+    nota_html = f'<div class="popup-nota">👉&nbsp; {html.escape(nota)}</div>' if nota else ""
+
+    return f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<style>
+@font-face {{
+  font-family: 'Display';
+  src: url('{font_data_uri("PlayfairDisplay-Bold.ttf")}') format('truetype');
+  font-weight: 400 900;
+}}
+@font-face {{
+  font-family: 'Body';
+  src: url('{font_data_uri("Inter-Regular.ttf")}') format('truetype');
+  font-weight: 100 900;
+}}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+html, body {{ width:{CANVAS_W}px; height:{CANVAS_H}px; overflow:hidden; background:transparent; }}
+body {{ position:relative; font-family:'Body', sans-serif; -webkit-font-smoothing:antialiased; }}
+.wrap {{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:0 78px; }}
+.card {{
+  width:100%; background:{p['bg']}; border-radius:44px; padding:66px 58px;
+  box-shadow:0 50px 100px rgba(10,8,6,.5), 0 2px 0 rgba(255,255,255,.4) inset;
+}}
+.kicker-row {{ display:flex; align-items:center; gap:20px; margin-bottom:38px; }}
+.badge-emoji {{ font-size:46px; line-height:1; }}
+.badge-num {{
+  flex:none; width:62px; height:62px; border-radius:50%; background:{p['accent']};
+  color:#FFF9F2; display:flex; align-items:center; justify-content:center;
+  font-family:'Display', serif; font-weight:800; font-size:27px;
+}}
+.kicker-label {{
+  font-size:27px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:{p['accent']};
+}}
+.popup-titulo {{
+  font-family:'Display', serif; font-weight:800; font-size:60px; line-height:1.14;
+  letter-spacing:-.015em; color:{p['ink']};
+}}
+.popup-cuerpo {{ margin-top:32px; font-size:37px; line-height:1.52; color:{p['dim']}; }}
+.popup-cuerpo mark {{
+  background:linear-gradient(180deg, transparent 58%, {p['accent']}55 58%);
+  color:{p['ink']}; font-weight:600; padding:0 2px;
+}}
+.popup-nota {{
+  margin-top:36px; padding-top:32px; border-top:1px solid {p['rule']};
+  font-size:29px; color:{p['accent']}; font-style:italic;
+}}
+</style></head><body>
+<div class="wrap"><div class="card">
+{kicker_row}
+<div class="popup-titulo">{html.escape(titulo)}</div>
+{cuerpo_html}
+{nota_html}
+</div></div>
+</body></html>"""
 
 
 BUILDERS = {

@@ -72,6 +72,18 @@ def generate_video_script(pilar: str, angulo: str, rubro: str, contexto: str | N
     return _con_fallback("generate_video_script", pilar, angulo, rubro, contexto)
 
 
+def generate_reel(pilar: str, angulo: str, rubro: str, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_reel", pilar, angulo, rubro, contexto)
+
+
+def generate_demo(pilar: str, angulo: str, rubro: str, contexto: str | None = None) -> dict:
+    return _con_fallback("generate_demo", pilar, angulo, rubro, contexto)
+
+
 def generate_angulos(pilar: str, formato: str | None, existentes: list[str], n: int,
                      rendimiento: str | None = None, contexto: str | None = None) -> dict:
     return _con_fallback("generate_angulos", pilar, formato, existentes, n, rendimiento, contexto)
+
+
+def generate_ig_caption(resumen: str) -> dict:
+    return _con_fallback("generate_ig_caption", resumen)
